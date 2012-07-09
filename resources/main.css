@@ -1,0 +1,120 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+div {
+	display: block;
+}
+
+body,html {
+margin: 0;
+padding: 0;
+font: 12px/1.5 arial;
+height:100%;
+}
+
+body {
+	background:  #0c1e28;
+	color: #DDD;
+	font-size: 13px;
+	line-height: 120%;
+	text-align: center;
+	min-height: 580px0;
+	display: block;
+}
+
+input {
+	border: 0 none;
+	border-radius: 5px 5px 5px 5px;
+	box-shadow: 0 3px 5px #999999 inset;
+	font-size: 20px;
+	margin: 2px;
+	padding: 2px;
+}
+
+button {
+    background: -moz-linear-gradient(-90deg, #FCEE21, #B96E17) repeat scroll 0 0 transparent;
+    border-color: #333333;
+    border-radius: 0.3em 0.3em 0.3em 0.3em;
+    border-style: solid;
+    border-width: 1px;
+    box-shadow: 0 0 5px black, 0 25px 5px rgba(255, 255, 255, 0.1) inset;
+    color: #5D370C;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 18px;
+    margin: 1px 2px;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    text-shadow: 0 1px 0 #FCEE21;
+    z-index: 100;
+}
+
+#container {
+	position: relative;
+	min-height:100%;
+}
+
+#content {
+	padding: 10px;
+	padding-bottom: 60px;  /*(20px font-size x 2 line-height) + (2 * 10px padding) = 60px*/
+	min-height: 600px;
+	background: url("/resources/home_bg.jpg") no-repeat scroll center top #0c1e28;
+}
+
+#footer {
+	position: absolute;
+	bottom: 0;
+	padding: 10px 0;
+	background-color: #AAA;
+	width: 100%;
+}
+
+#login_box {
+	margin: 0 auto;
+	position: relative;
+	width:340px;
+	height: 230px;
+	top: 350px;
+	color: #ebebeb;
+	font: 12px Arial, Helvetica, sans-serif;
+	background: url("/resources/login_bg.png") no-repeat left top;
+}
+#login_box h1 {
+	text-align: left;
+	font-size: 24px;
+	padding-left: 10px;
+}
+
+#login_box input {
+	font-size: 24px;
+	margin: 5px auto;
+	width: 210px;
+	height: 32px;
+}
+
+#login_box button {
+    width: 170px;
+}
+
+#login_box p {
+	padding: 0px 10px;
+	color: orange;
+	text-align: left;
+}
+
+
+.how_to_play {
+	font-size: x-large;
+    margin: 0 auto;
+    position: relative;
+    top: 440px;
+}
+
+.notice {
+	position: relative;
+	top: 490px;
+	color: orange;
+}

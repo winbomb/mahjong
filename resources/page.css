@@ -1,0 +1,61 @@
+* {
+	margin: 0px;
+	padding: 0px;
+}
+
+body {
+	background:	url("/resources/page_bg.jpg") repeat #0c1e28;
+}
+
+.dragon_bg {
+	background: url("/resources/dragon.jpg");
+	margin: 0px auto;
+	width: 500px;
+	height: 200px;
+}
+
+#game_list {
+	background: #0c1e28;	
+	width: 500px;
+	margin: 0px auto;
+	height: 460px;
+	border: 3px solid red;
+}
+
+.tb_game_list {
+	background: #d7d7d7;
+	width: 480px;
+	border: 1px solid black;
+}
+
+.game_list_pannel {
+	padding: 5px;
+	margin: 40px 5px 0;
+	padding: 10px 5px 0;
+	background: #fff;
+	height: 400px;
+}
+
+.title {
+	float: left;
+	margin: 5px;
+	color: white;
+}
+
+.quick-start {
+	float: right;
+	margin: 6px 10px 0 0;
+}
+
+.tb_game_list th, .tb_game_list td {
+    border-right: 1px solid black;
+	border-bottom: 1px solid black;
+    line-height: 18px;
+    padding: 4px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+input {
+	margin-bottom: 0px;
+}

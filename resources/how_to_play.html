@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>How to play</title>
+<style type="text/css"> 
+  body {
+	 background:url("/resources/page_bg.jpg") repeat #1c2eff
+  }
+  
+  #main {
+	  width: 700px;
+	  margin: 0px auto;
+	  background:#FFF;
+	  padding:1px;
+  }
+  
+  #tile_bing {
+	position:absolute;
+	 margin-top: 10px;
+	clip:rect(0px,360px,50px,0px);
+  } 
+  
+  #tile_tiao {
+	position:absolute;
+	clip:rect(50px,360px,100px,0px);
+	margin-top: -40px;
+  }
+  
+  #tile_wan {
+	position:absolute;
+	clip:rect(100px,360px,150px,0px);
+	margin-top: -90px;
+  }
+  
+  #tile_wan2 {
+	position:absolute;
+	clip:rect(150px,360px,200px,0px);
+	margin-top: -140px;
+  }
+  
+  #act_pung {
+	position:absolute;
+	clip:rect(0px,60px,60px,0px);
+  }
+  
+  #act_kong {
+	position:absolute;
+	clip:rect(0px,120px,60px,60px);
+	margin-left: -60px;
+  }
+  
+  #act_hooo {
+	position:absolute;
+	clip:rect(0px,180px,60px,120px);
+	margin-left: -120px;
+  }
+ .rule {
+	height: 70px;
+}
+.action_name {
+	margin-left: 70px;
+    padding-top: 40px;
+}
+.action_expr {
+	margin-left: 70px;
+	background-color: #CCC;
+}
+
+ul {
+	margin-top: 10px;
+}
+.indent_1 {
+	margin-left:40px;
+}
+
+.margin_40 {
+	margin-top:40px;
+}
+
+.how_to_play {
+	background:#90C;
+	padding:5px;
+	font-size:xx-large;
+	text-align:center;
+}
+
+#content {
+	padding:5px;
+}
+</style> 
+</head>
+<body>
+<div id="main">
+<div class="how_to_play">
+	How to paly Mahjong
+</div>
+<div id="content">
+<p><strong>1. Introduction</strong><br />
+  <strong>Mahjong (NOT Mahjong Solitaire)</strong> is a game that originated in China. It is  widely played in China and some Asian areas. Mahjong is a game of skill, strategy and calculation and involves a certain degree of chance. </p>
+<p>There are many variants of Mahjong with different rules. To make it easy, this game use the most simple one. Any one who never touched Mahjong would learn to play it in one minutes. Besides, we redesigned some tiles to make it easy to recognize for people who don't know Chinese characters in Mahjong tiles.</p>
+<p><strong>2. Mahjong  Set</strong></p>
+<p> Consit of 108 tiles in total and are divided  into 3 suits:</p>
+<ul >
+  <li>Circles (Number 1 to 9, 4 tiles each)</li>
+  <img src="/resources/tiles.png" id="tile_bing"/>  
+</ul>
+<p>&nbsp;</p>
+<ul class="margin_40">
+  <li>Bamboos(Number 1 to 9, 4 tiles each)</li>
+  <img src="/resources/tiles.png" id="tile_tiao"/> 
+</ul>
+<p>&nbsp;</p>
+<ul class="margin_40">
+  <li>Thousands(Number 1 to 9, 4 tiles each)</li>
+  <ul>
+    <li>Classical: </li>
+    <img src="/resources/tiles.png" id="tile_wan"/> 
+  </ul>
+</ul>
+<p>&nbsp;</p>
+<ul class="margin_40">
+  <ul>
+    <li>Redesigned: As classical thousand tiles contain Chinese characters that are hard for foreign people to recognize and remember. We redesign thousand tiles as follow </li>
+    <img src="/resources/tiles.png" id="tile_wan2"/>
+  </ul>
+</ul>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p><strong>3. How  to win</strong></p>
+<p> Collect  4 sets of either &quot;Pung&quot;, &quot;Sheung&quot;  or &quot;Kong&quot; and must have a pair of same tiles known as &quot;Jong&quot; to win, <font color="red"><strong>The &ldquo;Jong&rdquo; must have point of  2 or 5 or 8.</strong></font></p>
+<ul >
+  <li><strong>Pung</strong></a><strong> : </strong>Set of 3 identical tiles  from any suits<strong> </strong></li>
+</ul>
+<p><img src="/resources/eg_pung.png" width="600" height="100" class="indent_1"/></p>
+<ul>
+  <li><strong>Sheung: </strong>A run of 3 tiles from same  suit (9, 1, 2 is not permissible)<strong> </strong></li>
+</ul>
+<p><img src="/resources/eg_shun.png" width="600" height="100" class="indent_1" /></p>
+<ul>
+  <li><strong>Kong: </strong>4 identical tiles from any  suits<strong> </strong></li>
+</ul>
+<p><img src="/resources/eg_kong.png" width="600" height="100" class="indent_1"/></p>
+<ul>
+  <li><strong>Jong: </strong>A pair of same tiles<strong>, must be of point 2, 5 or 8 </strong></li>
+</ul>
+<p><img src="/resources/eg_jong.png" width="600" height="100" class="indent_1"/></p>
+<p><strong>4. Game  rules</strong></p>
+<p> The game will start when all four players  are ready. </p>
+<ul>
+  <li><strong>Dealing</strong>: This is automatically  done by game server. After dealing, the East ( first player who join the game ) has 14 tiles, the rest of the  players have 13 tiles each. And it&rsquo;s turn for east to discard.</li>
+  <li><strong>Discard</strong>: The current player discard  an unwanted tile face up into the middle, the tile may be useful for other  players to make up a set. So other players may <strong>call</strong> this tile. If no one calls,  the next player ( clockwise ) will pick up one tile from the Wall, and it&rsquo;s  turn for him/her to discard.</li>
+  <li><strong>Call</strong>: If the unwanted tile is  useful for one player to make up a set as in the following way:</li>
+  <ul> 
+    <li class="rule"> 
+    	<img src="/resources/menu_bar.png" id="act_pung"/>
+    	<div class="action_name">Pung ( 3 identical tiles) </div>
+    </li>
+  </ul>
+</ul>
+<div class="action_expr">
+<p>If player has 2 identical tiles in hand which match the  unwanted tile, &ldquo;Pung&rdquo; can be called.</p>
+</div>
+<ul >
+  <ul >
+    <li class="rule">
+    	<img src="/resources/menu_bar.png" id="act_kong"/>
+    	<div class="action_name">Kong ( 4 identical tiles) </div>
+    </li>
+  </ul>
+</ul>
+<div class="action_expr">
+<ul>
+  <li>If player has 3 identical tiles in hand which match the  unwanted tile, &ldquo;Kong&rdquo; can be called. This is known as &ldquo;Soft Kong&rdquo;.</li>
+  <li>    If player picks  up an identical tile from the Wall that match the other 3 tiles in hand, &ldquo;Kong&rdquo; can  be called. This is known as &ldquo;Hard Kong&rdquo;.</li>
+</ul>
+<p>Note: when &quot;Kong&quot; is shouted, player should pick up another tile from the tail of Wall (This is automatically done by game server).</p>
+</div>
+<ul >
+  <ul >
+    <li class="rule">
+    	<img src="/resources/menu_bar.png" id="act_hooo"/>
+    	<div class="action_name"> Hooo ( win the game)</div>
+    </li>
+  </ul>
+</ul>
+<div class="action_expr">
+  <ul>
+    <li>If player needs the unwanted tile to win, &ldquo;Hooo&rdquo; can be  called and we say the player who discard the unwanted tile made a &quot;Fire&quot;.</li>
+    <li>      If player picks up a tile and meet a win set, &ldquo;Hooo&rdquo; can be  called. This is known as &quot;Self Pick&quot;.</li>
+  </ul>
+</div>
+<p><strong>5. Scores </strong></p>
+<p>Scores are automatically calculated by server, the rules are as follow:</p>
+<ol>
+  <li> If no one wins after tiles are used out, this round  is draw, players&rsquo; score stay unchange. </li>
+  <li>If a player wins not by &quot;Self Pick&quot;, the player who made a &quot;Fire&quot; will give the winner 5 points. Note that winners may be more than one  if serveral players need the same tile to win at the same time.</li>
+  <li>If a player wins by &quot;Self Pick&quot;, all three other players are losers and must give the him/her 5 points each.</li>
+  <li>If a player made a &quot;Soft Kong&quot;, the player who help him/her made this must give 5 points to him/her.</li>
+  <li>If a player made a &quot;Hard Kong&quot;, all three other players must give him/her 5 points each.</li>
+</ol>
+<p><strong>6. Tips</strong></p>
+<ul>
+  <li><strong>Show numbers on tile: </strong>If you want to show numbers on tiles, you can check the checkbox &quot;show number&quot; on top right corner.</li>
+  <li><strong>Show classical tiles:</strong> If you can recognize Chinese characters, you can check the checkbox &quot;classic tiles&quot; on top right corner.</li>
+</ul>
+<p><strong>Enjoy  playing Mahjong now. </strong></p>
+</div>
+</div>
+</body>
+</html>
