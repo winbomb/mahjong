@@ -16,9 +16,10 @@ I have published this game on chrome web store, you can search "Mahjong Mania" t
 ##Build & Run##
 The game is built with [Opa](http://www.opalang.org), which is an enterprise framework for javascript. The source works
 fine with Opa 0.9.0 ~ 0.9.4.
-	$ make clean	#optional, clean old build
-	$ make all
-	$ make run
+
+    $ make clean
+    $ make all
+    $ make run
 
 launch a browser to visit: http://localhost:8080
 
