@@ -75,8 +75,7 @@ function start(url){
         case {path:["login"] ... }      	: Login.login_view()
         case {path:["game",x|_] ...}    	: game_view(x); 
         case {path:["how_to_play.html"] ...}: @static_resource("resources/how_to_play.html");
-		case {path:["admin"] ...}			: Main.admin_page()
-        case {path:["hall"] ...}        	: login_required(function(){Page.game_list_view()})
+	    case {path:["hall"] ...}        	: login_required(function(){Page.game_list_view()})
         case {path: _ ...}                	: Main.fourOffour()
 	}
 	
@@ -95,43 +94,5 @@ module Main {
 		Resource.styled_page("404", ["style.css"],
     	   <><h1>404</h1></>
     	);
-	}
-
-	//这种处理方式似乎不好，应该在查询的时候只查询出需要的结果
-	exposed function get_access_list(){
-		access_list = /mahjong/access_list
-		len = List.length(access_list);
-		result = if(len > 200) List.drop(len-200,access_list) else access_list;
-		List.rev(result);
-	}
-
-	function admin_page(){
-		Resource.page("login list",
-			<h2>访问次数：{/mahjong/view_count}</h2>
-			<h2>登录次数：{/mahjong/login_count}</h2>
-			<h2>访问列表：</h2>
-			<table border="1px">
-				<tr>
-					<th>用户ID</th>
-					<th>用户名</th>
-					<th>登录时间</th>
-					<th>IP</th>
-					<th>LANG</th>
-					<th>AGENT</th>
-					<th>Render</th>
-				</tr>
-				{List.map(function(access){
-					<tr>
-						<td width="100px"> {access.id} </td>
-						<td width="150px"> {access.name}</td>
-						<td width="200px"> {access.time}</td>
-						<td width="200px"> {access.ip}</td>
-						<td width="100px"> {access.lang}</td>
-						<td width="100px"> {access.agent}</td>
-						<td width="100px"> {access.render}</td>
-					</tr>
-				},get_access_list())}	
-			</table>
-		);
 	}
  }

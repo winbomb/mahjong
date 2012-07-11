@@ -38,32 +38,6 @@ type Player.status = {online}
 
 type Login.user = {unlogged} or {Player.t user};
 
-type Access.t = {
-	string id,
-	string name,
-	string time,
-	string ip,
-	string lang,
-	string agent,
-	string render
-}
-
-database mahjong {
-	int /view_count				//访问次数
-	int /login_count			//登录次数
-	int /game_count				//游戏次数
-	list(Access.t) /access_list //访问列表
-}
-
-exposed function record_access(access_info){
-	/mahjong/login_count++
-	/mahjong/access_list <+ {access_info with time: Date.to_string(Date.now())}
-}
-
-exposed function increase_view(){
-	/mahjong/view_count++
-}
-
 module Login {
 	state = UserContext.make({unlogged})
 
@@ -115,22 +89,6 @@ module Login {
 			user = {~name, idx: -1, status: {online}, coins: DEFAULT_COINS};
 			set_cookie("login_name",name);	
 			
-			req = Option.get(HttpRequest.get_request());
-			ip = IPv4.string_of_ip(HttpRequest.Generic.get_ip(req))
-			lang = ServerI18n.request_lang(req)
-			user_compat = HttpRequest.Generic.get_user_agent(req)
-			
-			access_info = {
-				id:		Random.string(8),
-				name:	name, 
-				time:	"",
-				ip:		ip,
-				lang:	lang,
-				agent:  get_agent(user_compat),
-				render:	get_render(user_compat)
-			}
-			record_access(access_info);
-
 			UserContext.change(function(_){{user:user}},state);
 			Client.goto("/hall");
 		}
@@ -141,7 +99,6 @@ module Login {
 		if(not(String.is_empty(login_name))){
 			Dom.set_value(#username,login_name);
 		}
-		increase_view();
 	}
 
 	function login_view(){

@@ -11,7 +11,7 @@ SRC_FILES=$(wildcard $(SRC_DIR)/*.opa)
 
 BIN_DIR=bin
 EXEC_NAME=./mahjong.exe
-RUN_OPTS= --verbose 2 --db-remote:mahjong localhost:27017
+RUN_OPTS= 
 DEBUG_NAME=./mahjong.exe --verbose 8
 EXEC=$(BIN_DIR)/$(EXEC_NAME)
 
