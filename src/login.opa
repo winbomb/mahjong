@@ -28,6 +28,7 @@ type Player.t = {
 	string name,                   //用户名
 	int idx, 	                   //坐标（0-3）
 //	bool is_ready,                 //是否准备好
+	bool is_bot,				   //是否是机器人
 	Player.status status,          //链路状态 
 	int coins,                     //积分
 } 
@@ -86,7 +87,7 @@ module Login {
 	function attempt_login(){
 	    name = Dom.get_value(#username);
 		if(not(String.is_empty(name))){
-			user = {~name, idx: -1, status: {online}, coins: DEFAULT_COINS};
+			user = {~name, idx: -1, is_bot: {false}, status: {online}, coins: DEFAULT_COINS};
 			set_cookie("login_name",name);	
 			
 			UserContext.change(function(_){{user:user}},state);

@@ -196,7 +196,7 @@ module Board {
 		//首先检查手牌中是否存在 2/5/8 的将
 		if(not(has_general(handcards))) {false} else {
 			//找到将 
-			generals = find_general(handcards);
+			generals = find_jong(handcards);
 			List.fold(function(general,can_hoo){
 				if(can_hoo) can_hoo else {
 					//cards为去掉两张将牌之后的牌
@@ -234,7 +234,7 @@ module Board {
 	}
 
 	/** 从一组牌中找出一对将牌  */
-	function find_general(cards){
+	function find_jong(cards){
 		List.fold(function(general,result){
 			pair = List.fold(function(c,pair){
 				if(List.length(pair) == 2) pair else {
@@ -320,13 +320,13 @@ module Board {
 		},deck.handcards,gangs); 
 	}
 
-	private function filter_group(cards,group){
+	function filter_group(cards,group){
 		List.filter(function(c){
 			c.id != group.card1.id && c.id != group.card2.id && c.id != group.card3.id
 		},cards);
 	}
 
-	private function filter_pair(cards,pair){
+	function filter_pair(cards,pair){
 		List.filter(function(c){
 			c.id != pair.card1.id && c.id != pair.card2.id
 		},cards);
@@ -652,6 +652,10 @@ module Card {
 		} else {
 			if(card1.point >= card2.point) {gt} else {lt}
 		}
+	}
+
+	function is_jong(card){
+		card.point == 2 || card.point == 5 || card.point == 8
 	}
 
 	function to_string(card){

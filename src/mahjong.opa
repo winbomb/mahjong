@@ -205,21 +205,30 @@ module Mahjong {
 	/**
 	* 弃牌 
 	*/
-	private function discard(game,idx,card){
+	public function discard(game,idx,card){
 		deck = LowLevelArray.get(game.board.decks,idx);
 		card_cnt = List.length(deck.handcards) + List.length(deck.donecards)*3
 		if(card_cnt <= 13){
 			Log.warning("Mahjong","Try to discard card, but only has 13 cards.");
 		}else{
-			game = {game with board: Board.discard(game.board,idx,card)}
-			game = {game with status: {wait_for_resp}}
-			game = {game with curr_card: some(card)} 
-			game = {game with actions: reset_actions(game)} |> update(_)
+			game = {game with board: Board.discard(game.board,idx,card),
+					status:{wait_for_resp},
+					curr_card: some(card)} |> reset_actions(_) |> update(_);
 			Network.broadcast({DISCARD_CARD: {index:idx,~card} },game.game_channel)
 
 			//如果没有人能够动作，则直接进入下一个玩家
 			b_done = LowLevelArray.for_all(game.actions)(function(act){act == {no_act}})
-			if(b_done) Scheduler.sleep(2000,function(){next_turn(game.id)});
+			if(b_done) Scheduler.sleep(2000,function(){next_turn(game.id)}) else{
+				Scheduler.sleep(1500,function(){
+					LowLevelArray.iteri(function(i,act){
+						match(LowLevelArray.get(game.players,i)){
+						case  {none}: void
+						case ~{some}:{
+							if(some.is_bot && act == {none}) Bot.call(game,i);
+						}}						
+					},game.actions);
+				});
+			}
 		}		
 	}
 	
@@ -228,24 +237,34 @@ module Mahjong {
 	* 玩家player碰
 	*/
 	private function peng(game,idx){
-		game = {game with board: Board.peng(game,idx,Option.get(game.curr_card))}
-		game = {game with status: {select_action}}
-		game = {game with curr_turn: idx}
-		game = {game with curr_card: {none}} |> update(_)
-				
+		game = {game with board: Board.peng(game,idx,Option.get(game.curr_card)),
+				status: 	{select_action},
+				curr_turn: 	idx,
+				curr_card: 	{none}} |> update(_);
+
 		Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{peng}},game.game_channel)
+		
+		match(LowLevelArray.get(game.players,idx)){
+		case  {none}: void
+		case ~{some}: if(some.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,idx)})
+		}
 	}
 	
 	/**
 	* 玩家player杠牌
 	*/
 	private function gang_card(game,idx){
-		game = {game with board: Board.gang(game,idx,Option.get(game.curr_card))}
-		game = {game with status: {select_action}}
-		game = {game with curr_turn: idx}
-		game = {game with curr_card: {none}} |> update(_)
+		game = {game with board: Board.gang(game,idx,Option.get(game.curr_card)),
+				status: 	{select_action},
+				curr_turn: 	idx,
+				curr_card: 	{none}} |> update(_)
 				
 		Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{gang}},game.game_channel)
+
+		match(LowLevelArray.get(game.players,idx)){
+		case  {none}: void
+		case ~{some}: if(some.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,idx)})
+		}
 	}
 
 	/**
@@ -284,12 +303,17 @@ module Mahjong {
 					
 		//更新deck
 		LowLevelArray.set(game.board.decks,idx,deck)
-		game = {game with board: Board.deal_card(game.board,idx)} 
-		game = {game with status: {select_action}}
-		game = {game with curr_turn: idx}
-		game = {game with curr_card: {none}} |> update(_) 
+		game = {game with board: Board.deal_card(game.board,idx), 
+				status: 	{select_action},
+				curr_turn: 	idx,
+				curr_card: 	{none}} |> update(_) 
 					
 		Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{gang_self}},game.game_channel)
+
+		match(LowLevelArray.get(game.players,idx)){
+		case  {none}: void
+		case ~{some}: if(some.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,idx)})
+		}
 	}
 	
 	/**
@@ -321,10 +345,19 @@ module Mahjong {
 	private function show_result(game){
 		//计算玩家的本局的积分
 		result = calc_scores(game);	
-
+		
 		//更新玩家的积分
 		players = update_scores(game.players,result); 
-		game = {game with players: players,status:{show_result}} |> update(_)	
+
+		//把所有机器人的OK状态设置为ready
+		ok_flags = LowLevelArray.foldi(function(i,player,result){
+			match(player){
+				case {none} : result 
+				case ~{some}: if(some.is_bot) set_flag(result,i) else result;
+			}
+		},players,0);
+
+		game = {game with ~players, ~ok_flags, status:{show_result}} |> update(_)	
 		
 		//广播得分消息
 		Network.broadcast({SHOW_RESULT: some(result)},game.game_channel)
@@ -387,6 +420,12 @@ module Mahjong {
 					LowLevelArray.set(game.players,idx,{none});
 					game = update(game);
 					Network.broadcast({PLAYER_CHANGE: Game.game_msg(game)},game.game_channel)
+
+					//如果游戏的player都离开了，则结束游戏。
+					if(Game.get_online_cnt(game.players) == 0){
+						game = {game with ready_flags:0,players: LowLevelArray.create(4,{none})}; //清空玩家
+						restart(game);
+					}
 				} else {
 					players = LowLevelArray.mapi(game.players)(function(i,p){
 						if(i != idx) p else {
@@ -397,9 +436,10 @@ module Mahjong {
 						}
 					});
 					game = {game with players: players} |> update(_);
-			
+
 					//如果游戏的player都离开了，则结束游戏。
 					if(Game.get_online_cnt(game.players) == 0){
+						game = {game with ready_flags:0,players: LowLevelArray.create(4,{none})}; //清空玩家
 						restart(game);
 					}
 				}
@@ -597,8 +637,10 @@ module Mahjong {
 				match(LowLevelArray.get(game.players,game.curr_turn)){
 					case {none}: Scheduler.sleep(1000,function(){ default_action(game)}); 
 					case {some:player}:{
-						if(player.status != {online}) {
+						if(player.is_bot == {false} && player.status != {online}) {
 							Scheduler.sleep(1000,function(){ default_action(game)});
+						}else{
+							if(player.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,game.curr_turn)});
 						}
 					}
 				}
@@ -607,26 +649,25 @@ module Mahjong {
 	}
 	
 	function reset_actions(game){
-		idx = game.curr_turn
-		 LowLevelArray.mapi(game.actions)(function(i,_){
-			//如果第i个玩家可以碰/杠/胡，则把action设置为{none},否则设置为{no_act}
+		actions = LowLevelArray.init(4)(function(i){
 			deck = LowLevelArray.get(game.board.decks,i);
 			can_act = match(game.curr_card){
-				case {none}: {false}
+				case  {none}: {false}
 				case ~{some}: {
 					Board.can_peng(deck,some) || Board.can_gang(deck,some) || Board.can_hoo_card(deck,some);
 				}
 			}
 
 			match(LowLevelArray.get(game.players,i)){
-				case {none}: {no_act}
+				case  {none}: {no_act}
 				case ~{some}: {
 					if(some.status != {online}) {no_act} else {
-						if(i != idx && can_act) {none} else {no_act}
+						if(i != game.curr_turn && can_act) {none} else {no_act}
 					}
 				}
-			}			
+			}	
 		});
+		{game with ~actions};
 	}
 	
 	/** 

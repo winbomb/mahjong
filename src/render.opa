@@ -55,7 +55,8 @@ get_game = %%engine2d.get_game%%;
 * 游戏的绘制引擎 
 */
 client module Render {
-	bool DEBUG = {false}
+	bool DEBUG = {true}
+	bool SHOW_TILE = {true}
 
 	//常用颜色的定义
 	BLACK = {color:Color.rgb(0,0,0)};
@@ -467,10 +468,10 @@ client module Render {
 				},deck.donecards);
 
 				start_y = 85 + 82*List.length(deck.donecards);
-				if((game.status != {game_over} && game.status != {show_result}) || deck.handcards == {nil}){
-					ignore(for(0,function(n){ draw_covered(ctx,rel_pos,120,start_y+22*n); n+1;}, _ <= card_cnt - 1))
-				}else{
+				if(SHOW_TILE || game.status == {game_over} || game.status == {show_result}){
 					List.iteri(function(n,c){ draw_down_card_left(ctx,c,100,start_y+22*n,{false}); },deck.handcards);
+				}else{
+					ignore(for(0,function(n){ draw_covered(ctx,rel_pos,120,start_y+22*n); n+1;}, _ <= card_cnt - 1))
 				}
 			}
 			case 2:{
@@ -492,10 +493,10 @@ client module Render {
 
 				//绘制手牌
 				start_x = 545 - 85*List.length(deck.donecards) - 25*card_cnt;
-				if((game.status != {game_over} && game.status != {show_result}) || deck.handcards == {nil}){
-					ignore(for(0,function(n){ draw_covered(ctx,2,start_x+25*n,5); n+1;}, _ <= card_cnt-1))
-				}else{
+				if(SHOW_TILE || game.status == {game_over} || game.status == {show_result}){
 					List.iteri(function(n,c){ draw_down_card_oppt(ctx,c,start_x+25*n,5,{false}); },deck.handcards);
+				}else{
+					ignore(for(0,function(n){ draw_covered(ctx,2,start_x+25*n,5); n+1;}, _ <= card_cnt-1))
 				}
 			}
 			case 3:{
@@ -513,10 +514,10 @@ client module Render {
 
 				//绘制手牌
 				start_y = 465 - 82*List.length(deck.donecards) - 22*(card_cnt+1)
-				if((game.status != {game_over} && game.status != {show_result}) || deck.handcards == {nil}){
-					ignore(for(0,function(n){ draw_covered(ctx,3,600,start_y+22*n); n+1;}, _ <= card_cnt-1))
-				}else{
+				if(SHOW_TILE || game.status == {game_over} || game.status == {show_result}){
 					List.iteri(function(n,c){ draw_down_card_right(ctx,c,600,start_y+22*n,{false}); },deck.handcards);
+				}else{
+					ignore(for(0,function(n){ draw_covered(ctx,3,600,start_y+22*n); n+1;}, _ <= card_cnt-1))
 				}
 			}
 			default: void

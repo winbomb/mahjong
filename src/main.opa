@@ -42,7 +42,7 @@ function with_user((Login.user -> 'a) f, 'a otherwise){
 	}
 }
 
-function game_view(game_id){
+function game_view(game_id,need_bot){
 	match(Login.get_user()){
 	case {unlogged}: Login.login_view();
 	case {user:player}: {
@@ -58,7 +58,9 @@ function game_view(game_id){
 						player = {player with status: {online}}
 						LowLevelArray.set(game.players,idx,some(player))
 						LowLevelArray.set(game.clients,idx,some(c));
+						game = if(need_bot) Game.add_bots(game) else game;
 						game = {game with change_flag:{true}} |> Game.update(_)
+
 						Game.game_view(game,idx);						
 					}
 					default: Page.game_list_view()
@@ -73,7 +75,8 @@ function start(url){
 	match(url) {
 		case {path:[] ... }             	: Login.login_view()
         case {path:["login"] ... }      	: Login.login_view()
-        case {path:["game",x|_] ...}    	: game_view(x); 
+        case {path:["game",id|_] ...}    	: game_view(id,{false});
+		case {path:["gamex",id|_] ...}    	: game_view(id,{true}); 
         case {path:["how_to_play.html"] ...}: @static_resource("resources/how_to_play.html");
 	    case {path:["hall"] ...}        	: login_required(function(){Page.game_list_view()})
         case {path: _ ...}                	: Main.fourOffour()

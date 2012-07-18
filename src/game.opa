@@ -217,6 +217,42 @@ module Game {
 		}
 	}
 	
+	// 向游戏中添加机器人
+	function add_bots(game){
+		players = LowLevelArray.mapi(game.players)(function(i,player){
+			match(player){
+				case {none}:{
+					name = "Bot {Random.int(2000)}";
+					some({~name,idx:i,is_bot:{true},status:{online},coins:DEFAULT_COINS});
+				}
+				case {some:player}: some(player);
+			}
+		})
+
+		ready_flags = LowLevelArray.foldi(function(i,player,result){
+			match(player){
+				case {none} : set_flag(result,i);
+				case ~{some}: if(some.is_bot) set_flag(result,i) else result;
+			}
+		},players,0);
+
+		{game with ~players,~ready_flags}
+	}
+	
+	/** 获得可以加入的游戏的id（未开始，人数为0） */
+	exposed function get_empty_gameid(){
+		game_opt = Map.find(function(_,game){
+			if(game.status != {prepare} && game.status != {game_over}) {false} else {
+				if(get_player_cnt(game.players) >= 1) {false} else {true}	
+			}
+		},ServerReference.get(gmMap));
+
+		match(game_opt){
+			case {none}:  {none}
+			case {some:s}: some(s.val.id)
+		}
+	}
+	
 	/** 获取游戏信息列表 */
 	public exposed function get_game_list(){
 		Map.fold(function(_,game,result){
@@ -239,7 +275,7 @@ module Game {
 		LowLevelArray.fold(function(player,count){
 			match(player){
 				case {none}: count;
-				case ~{some}: if(some.status == {online}) count+1 else count
+				case ~{some}: if(some.is_bot == {false} && some.status == {online}) count+1 else count
 			}
 		},players,0);
 	}
@@ -645,11 +681,6 @@ module Game {
 			</div>
 			</>
 		);
-		/** Resource.styled_page("Mahjong",["/resources/style.css"],
-			<>
-			<h1>Hello Mahjong!</h1>
-			</>
-		);*/
 	}
 
 	@async function post_chat_msg(author,channel){
@@ -691,15 +722,16 @@ module Game {
 
 	/** 开始游戏 */
 	function start(game){
-		{game with 
+		game = {game with 
 			board: 			Board.prepare(game.board),
 			status: 		{select_action},
 			curr_turn: 		0,
 			change_flag: 	{true},
 			ready_flags: 	0,
 			ok_flags:		0,
-			actions: 		Mahjong.reset_actions(game)
-		}
+		} 
+		
+		Mahjong.reset_actions(game);
 	}
 	
 	/** 重新开始游戏 
@@ -719,14 +751,16 @@ module Game {
 			case {some:p}: if(p.status == {offline}) {none} else some(p)
 			}
 		});
+		
+		//把所有机器人的Ready状态设置为ready
+		ready_flags = LowLevelArray.foldi(function(i,player,result){
+			match(player){
+				case {none} : result 
+				case ~{some}: if(some.is_bot) set_flag(result,i) else result;
+			}
+		},players,0);
 
-		{game with 
-			players:		players,
-			ok_flags:		0,
-			curr_turn: 		0,
-			change_flag:	{true},
-			actions: 		Mahjong.reset_actions(game)
-		}
+		{game with ~players, ~ready_flags, ok_flags:0, curr_turn:0, change_flag:{true}} |> Mahjong.reset_actions(_);
 	}
 
 	/** 获取某个玩家的deck */

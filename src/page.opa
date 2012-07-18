@@ -70,13 +70,22 @@ module Page {
 		},message)
 	}
 	
-	client function join_game(){
-		match(Game.get_free_gameid()){
+	client function join_game(need_bot){
+		match(need_bot){
+		case {false}:{
+			match(Game.get_free_gameid()){
 			case {none}: jlog("unable to join game.");
 			case {some:id}: {
 				Client.goto("/game/{id}");
-			}
+			}}
 		}
+		case {true}:{
+			match(Game.get_empty_gameid()){
+			case {none}: jlog("unable to join game.");
+			case {some:id}: {
+				Client.goto("/gamex/{id}");
+			}}
+		}}
 	}
 
 	function game_list_view(){
@@ -84,10 +93,13 @@ module Page {
 			<>
 			<div class="dragon_bg"></div>
 			<div id="game_list" onready={function(_){ page_ready()}} >
-				<div class="title"><h2>Game List</h2></div>
+				<div class="title"><h2>Welcome xxxx </h2></div>
 				<div class="quick-start">
+					<input type="button" class="btn btn-primary" value="Play With Bots"
+						onclick={function(_){join_game({true})}}/>
 					<input type="button" class="btn btn-primary" value="Quick Start"
-						onclick={function(_){join_game()}}/>
+						onclick={function(_){join_game({false})}}/>
+					<input type="button" class="btn btn-primary" value="Leave"/>
 				</div>
 				<div class="game_list_pannel">
 					<table class="tb_game_list">
