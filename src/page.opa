@@ -88,18 +88,24 @@ module Page {
 		}}
 	}
 
+	function leave(){
+		logout();
+		Client.goto("/login");
+	}
+
 	function game_list_view(){
-		Resource.styled_page("Welcome",["/resources/page.css"],
+		Resource.styled_page("Welcome to play China Mahjong",["/resources/page.css"],
 			<>
 			<div class="dragon_bg"></div>
 			<div id="game_list" onready={function(_){ page_ready()}} >
-				<div class="title"><h2>Welcome xxxx </h2></div>
+				<div class="title"><h2>{get_username()}</h2></div>
 				<div class="quick-start">
 					<input type="button" class="btn btn-primary" value="Play With Bots"
 						onclick={function(_){join_game({true})}}/>
 					<input type="button" class="btn btn-primary" value="Quick Start"
 						onclick={function(_){join_game({false})}}/>
-					<input type="button" class="btn btn-primary" value="Leave"/>
+					<input type="button" class="btn btn-primary" value="Leave"
+						onclick={function(_){leave()}}/>
 				</div>
 				<div class="game_list_pannel">
 					<table class="tb_game_list">

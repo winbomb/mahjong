@@ -25,6 +25,7 @@ body {
 .tb_game_list {
 	background: #d7d7d7;
 	width: 480px;
+	height: 398px;
 	border: 1px solid black;
 }
 

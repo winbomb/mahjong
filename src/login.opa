@@ -39,7 +39,6 @@ type Player.status = {online}
 
 type Login.user = {unlogged} or {Player.t user};
 
-module Login {
 	state = UserContext.make({unlogged})
 
 	function get_user(){
@@ -51,7 +50,7 @@ module Login {
 	}
 
 	function logout(){
-		UserContext.change(function(_){{unlogged}},state)
+		UserContext.remove(state)
 	}
 
 	function is_logged_in(){
@@ -60,6 +59,8 @@ module Login {
 			case {user:_}:   {true}
 		}
 	}
+
+module Login {
 	
 	function get_agent(user_compat){
 		match(user_compat.environment){
@@ -103,7 +104,7 @@ module Login {
 	}
 
 	function login_view(){
-		Resource.styled_page("Mahjong", ["/resources/main.css"],
+		Resource.styled_page("China Mahjong", ["/resources/main.css"],
 			<>
 			<div id="container" onready={function(_){page_ready()}}>
 				<div id="content">
@@ -114,7 +115,13 @@ module Login {
 						<button class="btn btn-primary btn-large" style="margin-top:10px" onclick={function(_){attempt_login()}}>Play</button>
 						<hr style="margin-bottom:5px">
 						<p>Note: This game need HTML5 canvas support, please use IE9+, Firefox4+, Chrome10+, Opera11+, Safari5+</p>
-						<p>Mahjong Rule: <a href="/how_to_play.html" target="_blank">How to play mahjong</a></p>
+						<div style="padding:0px 5px">
+							<button class="btn btn-info" style="float:left;width:60px;"
+							onclick={function(_){Tutor.show_tutor()}}>Tutorial</button>
+							<button class="btn btn-info" style="width:120px">Add to Chrome</button>
+							<a class="btn btn-info" style="float:right;width:105px;" 
+								href="https://github.com/winbomb/mahjong" target="_blank">Fork on Github</a>
+						</div>
     	    		</div>
 				</div>
 				<div id="footer">
