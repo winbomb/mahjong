@@ -34,6 +34,8 @@ type Game.obj = {
 	Status.t status,             			//游戏状态
 	int curr_turn,               			//当前玩家
 	int ready_flags,						//玩家的准备好标志
+	int round,
+	int dealer,
 	option(Card.t) curr_card,               //当前牌面上的牌 
 	llarray(option(Player.t)) players,    	//玩家列表
 	llarray(Deck.t) decks,		 			//所有玩家牌面 
@@ -51,20 +53,46 @@ type Game.obj = {
 set_game = %%engine2d.set_game%%;
 get_game = %%engine2d.get_game%%;
 
+PREFIX = "/resources/"
+
+function get_ctx(id){
+	canvas = Canvas.get(id);
+	Option.get(Canvas.get_context_2d(Option.get(canvas)));
+}
+	
+/** 获得图片资源 */
+function get(key){
+	{image: %%engine2d.get%%(PREFIX ^ key)}
+}
+
+/** 预加载图片和声音资源 */
+function preload(imgs,auds,f){
+	imgs = List.map(function(img){
+		PREFIX ^ img
+	},imgs);
+	auds = List.map(function(aud){
+		PREFIX ^ aud
+	},auds);
+	%%engine2d.preload%%(imgs,auds,f);
+}
+
+function play_sound(key){
+	%%engine2d.play_sound%%(PREFIX ^ key);
+}
+
 /**
 * 游戏的绘制引擎 
 */
 client module Render {
-	bool DEBUG = {true}
-	bool SHOW_TILE = {true}
+	bool DEBUG = {false}
+	bool SHOW_TILE = {false}
 
 	//常用颜色的定义
 	BLACK = {color:Color.rgb(0,0,0)};
 	RED = {color: Color.rgb(255,0,0)};
 	BLUE = {color: Color.rgb(0,0,255)};
 
-	PREFIX = "/resources/"
-	
+		
 	//等待时间 
 	WAIT_TIME = 10
 
@@ -74,6 +102,7 @@ client module Render {
 	Button.t btn_cancel = Button.simple(670,475,60,60,"放弃");   //放弃
 	Button.t btn_ready  = Button.simple(330,555,150,57,"准备"); //准备
 	Button.t btn_hide_result = Button.simple(333,423,75,45,"确定"); //关闭结算
+	Button.t btn_tutor  = Button.simple(600,555,100,100,"指导"); //关闭结算
 	
 	/** 是否在麻将牌上显示数字 */
 	g_show_number = Mutable.make(bool {false});
@@ -89,31 +118,7 @@ client module Render {
 		refresh();
 	}
 
-	function get_ctx(id){
-		canvas = Canvas.get(id);
-		Option.get(Canvas.get_context_2d(Option.get(canvas)));
-	}
 	
-	/** 获得图片资源 */
-	function get(key){
-		{image: %%engine2d.get%%(PREFIX ^ key)}
-	}
-
-	/** 预加载图片和声音资源 */
-	function preload(imgs,auds,f){
-		imgs = List.map(function(img){
-			PREFIX ^ img
-		},imgs);
-		auds = List.map(function(aud){
-			PREFIX ^ aud
-		},auds);
-		%%engine2d.preload%%(imgs,auds,f);
-	}
-
-	function play_sound(key){
-		%%engine2d.play_sound%%(PREFIX ^ key);
-	}
-
 	start_timer = %%engine2d.start_timer%%
 	stop_timer = %%engine2d.stop_timer%%
 	show_menu = %%engine2d.show_menu%%
@@ -140,7 +145,10 @@ client module Render {
 		
 		if(game.status == {prepare} || ( game.status == {show_result} && game.is_ok)){	
 			draw_prepare(ctx,game,game.idx);				//绘制牌堆
-			if(not(test_flag(game.ready_flags,game.idx))) Canvas.draw_image(ctx,get("start.png"),330,555);  //绘制“准备”按钮
+			if(not(test_flag(game.ready_flags,game.idx))){
+				Canvas.draw_image(ctx,get("start.png"),330,555);     //绘制“准备”按钮
+				Canvas.draw_image(ctx,get("btn_tutor.png"),620,510); //绘制“指导”按钮
+			}
 		}else{
 			draw_discards(ctx,game.discards,game.idx);	 	//绘制玩家弃牌
 			draw_handcards(ctx,game);						//绘制玩家手牌（不包括自己）
@@ -260,12 +268,12 @@ client module Render {
 		},game.players);
 		
 		//绘制等待信息
-		Canvas.set_fill_style(ctx,BLACK);
+		/** Canvas.set_fill_style(ctx,BLACK);
 		Canvas.set_font(ctx,"normal bold 11pt serif");
 		Canvas.set_text_align(ctx,{align_center});
 		Canvas.fill_text(ctx,"Waiting for players to set ready",400,360);
 		Canvas.fill_text(ctx,"Game will start when four players are",400,385);
-		Canvas.fill_text(ctx,"all ready",400,410);
+		Canvas.fill_text(ctx,"all ready",400,410);*/
 		Canvas.restore(ctx);
 	}
 
@@ -396,6 +404,9 @@ client module Render {
 				}
 			}
 		}
+
+		//绘制当前局数和庄家
+		//Canvas.fill_text(ctx,"ROUND {game.round+1} EAST",15,15);
 	}
 
 	/**
@@ -917,6 +928,8 @@ client module Render {
 			status: 		decode_status(game_msg.st),
 			curr_turn: 		game_msg.ct,
 			curr_card: 		game_msg.cc,
+			round:			game_msg.rd,
+			dealer:			game_msg.dl,
 			ready_flags:	game_msg.rf,
 			players: 		game_msg.pls,
 			decks: 			game_msg.dks,

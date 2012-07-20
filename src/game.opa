@@ -39,6 +39,8 @@ type Game.t = {
 	int ready_flags,					//用于表示玩家是否准备好（1 + 2 + 4 + 8）
 	int ok_flags, 						//用户表示玩家是否关闭了结算界面
 	int last_act,                       //最后一次出手时间，用于判断超时
+	int round,							//第几局
+	int dealer,							//庄家
 	bool change_flag,                   //标志这个游戏自上次广播之后状态（游戏人数，准备状态等）是否变化
 	list(int) winners,	 		        //游戏胜利玩家
 	option(Card.t) curr_card,   		//当前牌面上打出的牌
@@ -112,7 +114,9 @@ public function get_flag_cnt(flags){
 }
 
 module Game {
-	
+	AUTO_READY = {false};
+	AUTO_RESTART = {false};
+
 	init_board = {
 		//初始化创建10个房间
 		ignore(for(0,function(i){
@@ -125,6 +129,8 @@ module Game {
 				last_act:        0,
 				ready_flags: 	 0,
 				ok_flags:		 0,
+				round:			 0,
+				dealer:			 -1,
 				change_flag:     {false},
 				curr_card:       {none},
 				players:         LowLevelArray.create(4,{none}),
@@ -313,6 +319,8 @@ module Game {
 		{id:  	game.id,
 		 st: 	encode_status(game.status),
 		 ct: 	game.curr_turn,
+		 rd:	game.round,
+		 dl:	game.dealer,
 		 cc:    game.curr_card,
 		 rf: 	game.ready_flags,
 		 pls: 	game.players,
@@ -326,6 +334,8 @@ module Game {
 		{	id: 			game.id,
 			status: 		game.status,
 			curr_turn: 		game.curr_turn,
+			round:			game.round,
+			dealer:			game.dealer,
 			curr_card: 		game.curr_card,
 			ready_flags:    game.ready_flags,
 			players: 		game.players,
@@ -388,7 +398,7 @@ module Game {
 				case {none}: void
 				default: {
 					Render.refresh();
-					Render.play_sound("button.wav");
+					play_sound("button.wav");
 					Mahjong.request_action(game.id,game.idx,action);
 				}
 			}
@@ -407,7 +417,7 @@ module Game {
 				Render.refresh();
 			}
 			case {GAME_START: game_msg}:{
-				Render.play_sound("start.wav");
+				play_sound("start.wav");
 				Render.update(game_msg);
 				Render.update_deck();
 				Render.start_timer();
@@ -427,7 +437,7 @@ module Game {
 				refresh_players(game_msg.pls);
 			}
 			case {DISCARD_CARD: msg}:{  //玩家弃牌消息
-				Render.play_sound("da.wav");
+				play_sound("da.wav");
 				Render.stop_timer()
 				Render.recv_discard_msg(msg);
 				Render.refresh();
@@ -463,7 +473,7 @@ module Game {
 				Render.refresh();
 				player_idx = get_game().idx;
 				List.iter(function(win_idx){
-					if(player_idx == win_idx) Render.play_sound("win.wav")
+					if(player_idx == win_idx) play_sound("win.wav")
 					Render.draw_win(Board.get_rel_pos(player_idx,win_idx))
 				},winners);				
 			}	
@@ -480,7 +490,7 @@ module Game {
 						set_game({game with ~players}); 
 						refresh_players(players);
 						
-						Render.play_sound("countfan.wav");
+						play_sound("countfan.wav");
 						Render.refresh();
 						Render.show_result(game,some,195,75);
 					}
@@ -524,9 +534,9 @@ module Game {
 		//加载资源
 		imgs = ["table_bg.png","board.png","result.png","arrow.png","win.png","menu_bar.png","ting.png","dialog.png",
 				"tiles.png","tiles_small.png","numbers.png","start.png","offline.png","player_frame_h.png","player_frame_v.png",
-				"portrait.jpg","eswn.png"];
+				"portrait.jpg","eswn.png","btn_tutor.png"];
 		auds = ["start.wav","da.wav","button.wav","tray.wav","countfan.wav","win.wav"];
-		Render.preload(imgs,auds,function(){
+		preload(imgs,auds,function(){
 			Dom.set_value(#loading_info,"prepare game...");
 			game_obs = Network.observe(game_msg_received,game.game_channel);
 			chat_obs = Network.observe(user_update,game.chat_channel);
@@ -539,6 +549,8 @@ module Game {
 			game = update_player(game,player);
 			set_game(game_obj(game,player));
 			refresh_players(game.players);
+			
+			if(AUTO_READY || player.is_bot) Mahjong.set_ready(game,player.idx);
 
 			//离开页面的提示（对Opera无效）
 			Dom.bind_beforeunload_confirmation(function(_){
@@ -616,7 +628,7 @@ module Game {
 	function game_view(game,idx){
 		//更新第idx个玩家的client_ctx
 		player = Option.get(LowLevelArray.get(game.players,idx));
-	/**	_ = Client.setTimeout(function(){
+		_ = ClientEvent.set_on_disconnect_client(function(ctx){
 			//如果ctx和game的第idx个client一致，说明这个玩家处于死链接状态，去除之。
 			with_game(game.id,function(game){
 				match(LowLevelArray.get(game.clients,idx)){
@@ -628,14 +640,12 @@ module Game {
 					}
 				}
 			});
-			jlog("timeout");
-		},20);*/
-		
+		});
 			
 		Resource.styled_page("Mahjong",["/resources/style.css"],
 			<>
 			<div class="game" onready={function(_){game_ready(game,player) }}>	
-				<div class="canvas">
+			  <div class="canvas">
 			  	<div id=#gmloader >
 					<p id=#loading_info>loading</p>
 				</div>
@@ -729,6 +739,8 @@ module Game {
 			change_flag: 	{true},
 			ready_flags: 	0,
 			ok_flags:		0,
+			round:			0,
+			dealer:			0
 		} 
 		
 		Mahjong.reset_actions(game);

@@ -116,7 +116,10 @@ module Mahjong {
 				//准备 
 				if(not(test_flag(game.ready_flags,game.idx)) && Button.is_pressed(pos,Render.btn_ready)){
 					{set_ready}
-				} else {none} 
+				} else{
+					if(Button.is_pressed(pos,Render.btn_tutor)) Tutor.show_tutor();
+					{none}
+				}
 			} 
 			case {select_action}: {
 				//选择弃掉的牌
@@ -379,7 +382,7 @@ module Mahjong {
 	/**
 	* 设置用户准备好 
 	*/
-	private function set_ready(game,idx){
+	exposed function set_ready(game,idx){
 		game = {game with ready_flags: set_flag(game.ready_flags,idx), change_flag: {true}}
 		if(game.ready_flags == ALL_IS_READY){
 			game = Game.start(game) |> update(_);

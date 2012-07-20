@@ -30,6 +30,8 @@ type Game.msg = {
 	string 			id,                    	//游戏id 
 	int 			st,		             	//游戏状态 status
 	int 			ct,		               	//当前玩家 curr_turn
+	int				rd,						//第几局 round
+	int				dl,						//庄家	 dealer
 	int				rf,						//玩家准备好标志 ready_flags
 	option(Card.t) 	cc,		                //当前牌面上的牌 curr_card
 	llarray(option(Player.t)) 	pls,	   	//玩家列表 players

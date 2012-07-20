@@ -27,23 +27,22 @@ function login_required(  -> resource page){
 	}
 }
 
-function is_logged_in(){
-	match(Login.get_user()){
-			case {unlogged}: {false}
-			case {user:_}:   {true}
-		}
-	}
-
-
 function with_user((Login.user -> 'a) f, 'a otherwise){
-	match(Login.get_user()){
+	match(get_user()){
 		case ~{user}:    f(user);
 		case {unlogged}: otherwise;
 	}
 }
 
+function get_username(){
+	match(get_user()){
+	case ~{user}: user.name
+	case {unlogged}: "anonymous"
+	}
+}
+
 function game_view(game_id,need_bot){
-	match(Login.get_user()){
+	match(get_user()){
 	case {unlogged}: Login.login_view();
 	case {user:player}: {
 		match(Game.get(game_id)){
@@ -79,6 +78,7 @@ function start(url){
 		case {path:["gamex",id|_] ...}    	: game_view(id,{true}); 
         case {path:["how_to_play.html"] ...}: @static_resource("resources/how_to_play.html");
 	    case {path:["hall"] ...}        	: login_required(function(){Page.game_list_view()})
+		case {path:["tutor"] ...}			: Tutor.page_view();
         case {path: _ ...}                	: Main.fourOffour()
 	}
 	
@@ -98,4 +98,4 @@ module Main {
     	   <><h1>404</h1></>
     	);
 	}
- }
+}
