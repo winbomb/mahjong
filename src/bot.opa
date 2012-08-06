@@ -22,40 +22,61 @@ package mahjong
 
 server module Bot {
 	
+	function action(game,idx){
+		match(LowLevelArray.get(game.players,idx)){
+		case  {none}: void;
+		case ~{some}: if(some.is_bot) Scheduler.sleep(1500,function(){Bot.play(game,idx)});
+		}
+	}
+	/**
+	* 玩家叫牌，规则为：
+	* 能胡则胡，能杠则杠。
+	* 如果是碰，要考虑一下。
+	*/
 	function call(game,idx){
 		match(LowLevelArray.get(game.players,idx)){
 		case  {none}: Mahjong.request_action(game.id,idx,{no_act});
 		case ~{some}: {
-			card = Option.get(game.curr_card);
-			deck = LowLevelArray.get(game.board.decks,idx);
-			//如果能胡，胡之
-			if(Board.can_hoo_card(deck,card)) Mahjong.request_action(game.id,idx,{hoo}) else{
-				//如果能杠，则杠之
-				if(Board.can_gang(deck,card)) Mahjong.request_action(game.id,idx,{gang}) else {
-					//如果能碰，考虑之
-					if(Board.can_peng(deck,card)){
-						cards = List.sort_with(Card.compare,deck.handcards);
-						jong_cnt = jong_cnt(cards);
-						if(Card.is_jong(card) && jong_cnt <= 1){
-							Mahjong.request_action(game.id,idx,{no_act});
-						}else{
-							match(in_use(cards,card)){
-							case  {true}: Mahjong.request_action(game.id,idx,{no_act});
-							case {false}: Mahjong.request_action(game.id,idx,{peng});
-							}
-						}
-					}else Mahjong.request_action(game.id,idx,{no_act});
-				}
+			match(game.curr_card){
+			case {none}: {
+				jlog("ERROR");
+				Mahjong.request_action(game.id,idx,{no_act});
 			}
+			case {some:card}:{
+				deck = LowLevelArray.get(game.board.decks,idx);
+				//如果能胡，胡之
+				if(Board.can_hoo_card(deck,card)) Mahjong.request_action(game.id,idx,{hoo}) else{
+					//如果能杠，则杠之
+					if(Board.can_gang(deck,card)) Mahjong.request_action(game.id,idx,{gang}) else {
+						//如果能碰，考虑之
+						if(Board.can_peng(deck,card)){
+							cards = List.sort_with(Card.compare,deck.handcards);
+							jong_cnt = jong_cnt(cards);
+							if(Card.is_jong(card) && jong_cnt <= 1){
+								Mahjong.request_action(game.id,idx,{no_act});
+							}else{
+								match(in_use(cards,card)){
+								case  {true}: Mahjong.request_action(game.id,idx,{no_act});
+								case {false}: Mahjong.request_action(game.id,idx,{peng});
+								}
+							}
+						}else Mahjong.request_action(game.id,idx,{no_act});
+					}
+				}
+			}}
 		}}
 	}
-
+	
+	/**
+	* 玩家出牌
+	* 从手牌中选择一张弃掉
+	**/
 	function play(game,idx){
 		deck = LowLevelArray.get(game.board.decks,idx);
 		//如果能胡，胡之
 		if(Board.can_hoo_self(deck)) Mahjong.request_action(game.id,idx,{hoo}) else {
 			//如果能杠，杠之
-			if(Board.can_gang_self(deck)) Mahjong.request_action(game.id,idx,{gang}) else{
+			if(Board.can_gang_self(deck)) Mahjong.request_action(game.id,idx,{gang_self}) else{
 				//否则从handcards里面选一张牌弃掉
 				cards = List.sort_with(Card.compare,deck.handcards);
 				jong  = select_jong(cards);
@@ -84,11 +105,12 @@ server module Bot {
 		//TODO
 		{false}
 	}
-
+	
+	//获得牌中将的个数
 	function jong_cnt(cards){
 		List.foldi(function(i,c,cnt){
-			pp = get_point(cards,i-1);
-			np = get_point(cards,i+1);
+			pp = get_point(cards,i-1); //previous tile's point
+			np = get_point(cards,i+1); //next tile's point
 			if(i <= List.length(cards)-1 && np == c.point && pp != c.point && Card.is_jong(c)){
 				cnt + 1;
 			}else cnt
@@ -101,6 +123,7 @@ server module Bot {
 		if(n == 0) {none} else List.get(Random.int(n),cards);
 	}
 	
+	//获得cards中idx位置牌的点数
 	function get_point(cards,idx){
 		if(idx <= -1) -99 else {
 			if(idx >= List.length(cards)) 99 else{
@@ -111,7 +134,8 @@ server module Bot {
 			}
 		}
 	}
-
+	
+	//获得cards中idx位置的牌的花色
 	function get_suit(cards,idx){
 		if(idx <= -1 || idx >= List.length(cards)) {none} else{
 			match(List.get(idx,cards)){
@@ -121,7 +145,7 @@ server module Bot {
 		}
 	}
 
-	//  
+	//从一组牌中找出顺（例如：3W/4W/5W)
 	function find_shun(cards){
 		n = List.length(cards);
 		List.foldi(function(i,c,result){
@@ -129,14 +153,15 @@ server module Bot {
 				nnp = get_point(cards,i+2); //next next point
 				np  = get_point(cards,i+1); //next point
 				cp  = c.point;				//current point
-				if(i <= n-2 && np == cp+1 && nnp == cp+2){
+				if(i <= n-3 && np == cp+1 && nnp == cp+2){
 					shun = {card1:c,card2:Option.get(List.get(i+1,cards)),card3:Option.get(List.get(i+2,cards))}
 					some(shun)
 				}else result
 			}
 		},cards,{none});
 	}
-
+	
+	//从一组牌中找出刻（例如: 3W/3W/3W)
 	function find_ke(cards){
 		n = List.length(cards);
 		List.foldi(function(i,c,result){
@@ -144,25 +169,27 @@ server module Bot {
 				nnp = get_point(cards,i+2); //next next point
 				np  = get_point(cards,i+1); //next point
 				cp  = c.point;				//current point
-				if(i <= n-2 && np == cp && nnp == cp){
+				if(i <= n-3 && np == cp && nnp == cp){
 					ke = {card1:c,card2:Option.get(List.get(i+1,cards)),card3:Option.get(List.get(i+2,cards))}
 					some(ke)
 				}else result
 			}
 		},cards,{none});
 	}
-
+	
+	//从一组牌中找出将
 	function find_jong(cards){
 		n = List.length(cards);
 		List.foldi(function(i,c,jong){
 			pp = get_point(cards,i-1);
 			np = get_point(cards,i+1);
-			if(i <= n-1 && np == c.point && pp != c.point && Card.is_jong(c)){
+			if(i <= n-2 && np == c.point && pp != c.point && Card.is_jong(c)){
 				some({card1:c,card2:Option.get(List.get(i+1,cards))});
 			}else jong
 		},cards,{none});
 	}
-
+	
+	//从一组牌中选择一个将
 	function select_jong(cards){
 		groups = split(cards);
 		result = List.fold(function(g,result){
@@ -182,7 +209,9 @@ server module Bot {
 		
 		result.jong;
 	}
-
+	
+	//找出除去顺子和刻子之后剩下的牌。
+	//这是一个回朔的算法
 	function find(cards){
 		if(List.length(cards) <= 2) cards else {
 			best1 = match(find_shun(cards)){
@@ -199,6 +228,9 @@ server module Bot {
 		}
 	}
 	
+	//从一组牌中选择一个弃掉
+	//如果有将，则随便选一个
+	//如果没将，则尽量选择不是将的牌弃掉
 	function choose(cards,jong){
 		if(List.length(cards) == 0) {none} else {
 			match(jong){
@@ -213,7 +245,8 @@ server module Bot {
 			}}
 		}					
 	}
-
+	
+	//决定弃掉的牌
 	function decide(groups,jong){
 		tg1 = List.filter(function(g){mod(List.length(g)-1,3) == 0},groups); //4,7,10,13
 		cands1 = List.fold(function(g,c){
@@ -236,7 +269,8 @@ server module Bot {
 			}			
 		}
 	}
-
+	
+	//将牌分组,连续的同花色的牌为一组。
 	function split(cards){
 		result = List.foldi(function(i,c,result){
 			same_suit = match(get_suit(cards,i+1)){
@@ -268,6 +302,11 @@ module TestBot {
 		//test_decide();
 		//test_find();
 		//test_select_jong();
+		//test_random();
+	}
+	
+	function test_random(){
+		jlog("rand = {Random.int(1)}");
 	}
 
 	function test_find_single(){
