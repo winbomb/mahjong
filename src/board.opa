@@ -103,7 +103,7 @@ module Board {
 	/**
 	* 准备牌面
 	*/
-	function prepare(board){
+	function prepare(board,idx){
 		//先随机选一个开牌的点
 		//rand = Random.int(54) * 2;
 		rand = 0
@@ -112,7 +112,7 @@ module Board {
 		//每个人发13张牌，庄家发14张
 		if(not(DEBUG)){
 			board = deal_round_n(board,13);
-			deal_card(board,0) |> sort(_);
+			deal_card(board,idx) |> sort(_);
 		}else{
 			TestUtil.prepare(board) |> sort(_)
 		}
@@ -376,7 +376,7 @@ module Board {
 	*/
 	function deal_card(board,idx){
 		deck = LowLevelArray.get(board.decks,idx);
-		
+			
 		card = List.head(board.card_pile);
 		handcards = List.rev(deck.handcards) |> List.add(card,_) |> List.rev(_); //把这张牌添加到牌尾 
 		deck = {deck with handcards: handcards}

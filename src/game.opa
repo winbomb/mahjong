@@ -129,8 +129,8 @@ module Game {
 				last_act:        0,
 				ready_flags: 	 0,
 				ok_flags:		 0,
-				round:			 0,
-				dealer:			 -1,
+				round:			 1,
+				dealer:			 1,
 				change_flag:     {false},
 				curr_card:       {none},
 				players:         LowLevelArray.create(4,{none}),
@@ -392,13 +392,14 @@ module Game {
 			mouse_pos = event.mouse_position_on_page;	
 			x = mouse_pos.x_px - canvas_pos.x_px;
 			y = mouse_pos.y_px - canvas_pos.y_px;
+			x = x * 2;
+			y = y * 2;
 			pos = ~{x,y}
 			action = Mahjong.get_action(pos,game);
 			match(action){
 				case {none}: void
 				default: {
 					Render.refresh();
-					play_sound("button.wav");
 					Mahjong.request_action(game.id,game.idx,action);
 				}
 			}
@@ -464,6 +465,7 @@ module Game {
 				action_flag = Render.get_action_flag();
 				if(action_flag >= 2) Render.show_menu(action_flag);
 				
+				play_sound("pung.wav");
 				rel_pos = Board.get_rel_pos(get_game().idx,game_msg.ct);
 				Render.draw_act(rel_pos,act);
 			}
@@ -535,7 +537,7 @@ module Game {
 		imgs = ["table_bg.png","board.png","result.png","arrow.png","win.png","menu_bar.png","ting.png","dialog.png",
 				"tiles.png","tiles_small.png","numbers.png","start.png","offline.png","player_frame_h.png","player_frame_v.png",
 				"portrait.jpg","eswn.png","btn_tutor.png"];
-		auds = ["start.wav","da.wav","button.wav","tray.wav","countfan.wav","win.wav"];
+		auds = ["start.wav","da.wav","pung.wav","countfan.wav","win.wav"];
 		preload(imgs,auds,function(){
 			Dom.set_value(#loading_info,"prepare game...");
 			game_obs = Network.observe(game_msg_received,game.game_channel);
@@ -550,8 +552,6 @@ module Game {
 			set_game(game_obj(game,player));
 			refresh_players(game.players);
 			
-			if(AUTO_READY || player.is_bot) Mahjong.set_ready(game,player.idx);
-
 			//离开页面的提示（对Opera无效）
 			Dom.bind_beforeunload_confirmation(function(_){
 				{some: "Are you sure to quit?"}
@@ -568,8 +568,15 @@ module Game {
 			
 			//去掉#gamecanvas的loading样式
 			Render.refresh();
-			Dom.remove(#gmloader);
+			Dom.remove(#gmloader);			
 		});
+
+		if(AUTO_READY || player.is_bot) Mahjong.set_ready(game,player.idx);
+
+		//缩放Canvas到合适比例
+		canvas = Canvas.get(#gmcanvas);
+		ctx = Option.get(Canvas.get_context_2d(Option.get(canvas)));
+		Canvas.scale(ctx,0.5,0.5);
 	}
 	
 	/**
@@ -627,24 +634,25 @@ module Game {
 	*/
 	function game_view(game,idx){
 		//更新第idx个玩家的client_ctx
-		player = Option.get(LowLevelArray.get(game.players,idx));
-		_ = ClientEvent.set_on_disconnect_client(function(ctx){
-			//如果ctx和game的第idx个client一致，说明这个玩家处于死链接状态，去除之。
-			with_game(game.id,function(game){
-				match(LowLevelArray.get(game.clients,idx)){
-					case {none}: void
-					case {some:c}:{
-						if(c.client == ctx.client && c.page == ctx.page){
-							Mahjong.quit(game.id,idx);
-						}
-					}
-				}
-			});
-		});
-			
+		player = Option.get(LowLevelArray.get(game.players,idx));			
 		Resource.styled_page("Mahjong",["/resources/style.css"],
 			<>
-			<div class="game" onready={function(_){game_ready(game,player) }}>	
+			<div class="game" onready={function(_){
+				_ = ClientEvent.set_on_disconnect_client(function(ctx){
+					//如果ctx和game的第idx个client一致，说明这个玩家处于死链接状态，去除之。
+					with_game(game.id,function(game){
+						match(LowLevelArray.get(game.clients,idx)){
+							case {none}: void
+							case {some:c}:{
+								if(c.client == ctx.client && c.page == ctx.page){
+									Mahjong.quit(game.id,idx);
+								}
+							}
+						}
+					});
+				});
+				game_ready(game,player);
+			  }}>	
 			  <div class="canvas">
 			  	<div id=#gmloader >
 					<p id=#loading_info>loading</p>
@@ -732,28 +740,27 @@ module Game {
 
 	/** 开始游戏 */
 	function start(game){
+		idx = mod(game.dealer / 10000,4);
 		game = {game with 
-			board: 			Board.prepare(game.board),
+			board: 			Board.prepare(game.board,idx),
 			status: 		{select_action},
-			curr_turn: 		0,
+			curr_turn: 		idx,
 			change_flag: 	{true},
 			ready_flags: 	0,
 			ok_flags:		0,
-			round:			0,
-			dealer:			0
-		} 
-		
+		}		
 		Mahjong.reset_actions(game);
 	}
 	
 	/** 重新开始游戏 
 	* ready: 是否需要玩家重现点ready
 	*/
-	function restart(game,auto_ready){
+	function restart(game){
+		curr_turn = mod(game.dealer / 10000,4);
 		game = {game with board: Board.create()}
-		game = match(auto_ready){
+		game = match(AUTO_RESTART){
 			case {false}: {{game with board: Board.create()} with status: {prepare}}
-			case {true}:  {{game with board: Board.prepare(Board.create())} with status: {select_action}}
+			case {true}:  {{game with board: Board.prepare(Board.create(),curr_turn)} with status: {select_action}}
 		}
 		
 		//去除掉状态为offline的玩家，更新所有玩家的准备状态为{false}
@@ -772,7 +779,12 @@ module Game {
 			}
 		},players,0);
 
-		{game with ~players, ~ready_flags, ok_flags:0, curr_turn:0, change_flag:{true}} |> Mahjong.reset_actions(_);
+		is_winner = List.exists(function(idx){idx == game.dealer / 10000},game.winners); 
+		dealer = if(is_winner) game.dealer + 1 else mod((game.dealer / 10000) + 1,4)*10000 + 1
+		round  = if(dealer == 1) game.round + 1 else game.round
+
+		{game with ~players, ~ready_flags, ~round, ~dealer, ~curr_turn,
+		 ok_flags:0, change_flag:{true}} |> Mahjong.reset_actions(_);
 	}
 
 	/** 获取某个玩家的deck */

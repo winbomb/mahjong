@@ -39,26 +39,32 @@ type Player.status = {online}
 
 type Login.user = {unlogged} or {Player.t user};
 
-	state = UserContext.make({unlogged})
+state = UserContext.make({unlogged})
 
-	function get_user(){
-		UserContext.execute(identity,state);
-	}
+function get_user(){
+	UserContext.execute(identity,state);
+}
 
-	function set_user(new_user){
-		UserContext.change_or_destroy(function(_){some(new_user)},state);
-	}
+function set_user(new_user){
+	UserContext.change_or_destroy(function(_){some(new_user)},state);
+}
 
-	function logout(){
-		UserContext.remove(state)
-	}
+function logout(){
+	UserContext.remove(state)
+}
 
-	function is_logged_in(){
-		match(get_user()){
-			case {unlogged}: {false}
-			case {user:_}:   {true}
-		}
+function is_logged_in(){
+	match(get_user()){
+		case {unlogged}: {false}
+		case {user:_}:   {true}
 	}
+}
+
+A = function(user_compat){
+	"U"
+}
+
+
 
 module Login {
 	
@@ -101,10 +107,11 @@ module Login {
 		if(not(String.is_empty(login_name))){
 			Dom.set_value(#username,login_name);
 		}
+		jlog("width = {Client.width()}, height = {Client.height()}");
 	}
 
 	function login_view(){
-		Resource.styled_page("China Mahjong", ["/resources/main.css"],
+		/** r = Resource.styled_page("China Mahjong", ["/resources/main.css"],
 			<>
 			<div id="container" onready={function(_){page_ready()}}>
 				<div id="content">
@@ -130,6 +137,39 @@ module Login {
 				</div>
 			</div>			
 			</>
-        )
+        ); */
+		
+		Resource.full_page("China Mahjong",
+			<>
+			<div id="container" onready={function(_){page_ready()}}>
+				<div id="content">
+					<div id=#login_box>
+						<h1> Login </h1>
+						<input id=#username type="text" class="input-xlarge" placeholder="Enter a nickname"
+						 	   onnewline={function(_){attempt_login()}}/>
+						<button class="btn btn-primary btn-large" style="margin-top:10px" onclick={function(_){attempt_login()}}>Play</button>
+						<hr style="margin-bottom:5px">
+						<p>Note: This game need HTML5 canvas support, please use IE9+, Firefox4+, Chrome10+, Opera11+, Safari5+</p>
+						<div style="padding:0px 5px">
+							<button class="btn btn-info" style="float:left;width:60px;"
+							onclick={function(_){Tutor.show_tutor()}}>Tutorial</button>
+							<button class="btn btn-info" style="width:120px">Add to Chrome</button>
+							<a class="btn btn-info" style="float:right;width:105px;" 
+								href="https://github.com/winbomb/mahjong" target="_blank">Fork on Github</a>
+						</div>
+    	    		</div>
+				</div>
+				<div id="footer">
+					<p>Build with <a target="_blank" href="http://www.opalang.org">Opa</a></p>
+					<p>Any Feedback, please mail to: <a href="mailto:li.wenbo@whu.edu.cn">li.wenbo@whu.edu.cn</a></p>
+				</div>
+			</div>
+			</>,
+			<>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+			<link rel="stylesheet" type="text/css" href="/resources/main.css">
+			</>,
+			{success},[]
+		);
 	}
 }

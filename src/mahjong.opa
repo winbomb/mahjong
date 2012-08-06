@@ -222,7 +222,7 @@ module Mahjong {
 			//如果没有人能够动作，则直接进入下一个玩家
 			b_done = LowLevelArray.for_all(game.actions)(function(act){act == {no_act}})
 			if(b_done) Scheduler.sleep(2000,function(){next_turn(game.id)}) else{
-				Scheduler.sleep(1500,function(){
+				Scheduler.sleep(2000,function(){
 					LowLevelArray.iteri(function(i,act){
 						match(LowLevelArray.get(game.players,i)){
 						case  {none}: void
@@ -246,11 +246,7 @@ module Mahjong {
 				curr_card: 	{none}} |> update(_);
 
 		Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{peng}},game.game_channel)
-		
-		match(LowLevelArray.get(game.players,idx)){
-		case  {none}: void
-		case ~{some}: if(some.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,idx)})
-		}
+		Bot.action(game,idx);
 	}
 	
 	/**
@@ -263,11 +259,7 @@ module Mahjong {
 				curr_card: 	{none}} |> update(_)
 				
 		Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{gang}},game.game_channel)
-
-		match(LowLevelArray.get(game.players,idx)){
-		case  {none}: void
-		case ~{some}: if(some.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,idx)})
-		}
+		Bot.action(game,idx);
 	}
 
 	/**
@@ -278,18 +270,20 @@ module Mahjong {
 		//首先找到可以杠的牌
 		deck = LowLevelArray.get(game.board.decks,idx);
 		gangs = Board.find_gangs(deck);
-
+		
 		//如果结果长度为1，则杠这个
-		gang = List.head(gangs);
+		if(List.length(gangs) <= 0) void else {
+			gang = List.head(gangs);
 
-		//从手牌中过滤掉这些牌，然后加到donecards中
-		gang_card = List.head(gang.cards);
-		handcards = List.filter(function(c){
-			c.point != gang_card.point || c.suit != gang_card.suit
-		},deck.handcards);
-					
-		deck = {deck with handcards: handcards}
-		deck = match(gang.kind){
+			//从手牌中过滤掉这些牌，然后加到donecards中
+			gang_card = List.head(gang.cards);
+			handcards = List.filter(function(c){
+				c.point != gang_card.point || c.suit != gang_card.suit
+			},deck.handcards);
+			
+			//更新deck
+			deck = {deck with ~handcards}
+			deck = match(gang.kind){
 			case {Hard_Gang}:{deck with donecards: gang +> deck.donecards}
 			case {Soft_Gang}:{
 				//先去掉原来的那个碰，在加上现在的这个杠
@@ -302,20 +296,18 @@ module Mahjong {
 				{deck with donecards: gang +> donecards}
 			}
 			default: deck
-		}
+			}		
+			LowLevelArray.set(game.board.decks,idx,deck)
+			
+			if(List.length(game.board.card_pile) == 0) draw_play(game) else {
+				game = {game with board: Board.deal_card(game.board,idx), 
+						status: 	{select_action},
+						curr_turn: 	idx,
+						curr_card: 	{none}} |> update(_) 
 					
-		//更新deck
-		LowLevelArray.set(game.board.decks,idx,deck)
-		game = {game with board: Board.deal_card(game.board,idx), 
-				status: 	{select_action},
-				curr_turn: 	idx,
-				curr_card: 	{none}} |> update(_) 
-					
-		Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{gang_self}},game.game_channel)
-
-		match(LowLevelArray.get(game.players,idx)){
-		case  {none}: void
-		case ~{some}: if(some.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,idx)})
+				Network.broadcast({NEXT_ACTION: Game.game_msg(game),ACT:{gang_self}},game.game_channel)
+				Bot.action(game,idx);	
+			}
 		}
 	}
 	
@@ -326,9 +318,7 @@ module Mahjong {
 		//从服务器端再检查一遍能否胡牌
 		game = {game with winners: winners, status:{game_over}} |> update(_);
 		Network.broadcast({HOO: winners},game.game_channel)
-		Scheduler.sleep(5000,function(){
-			show_result(game);
-		});
+		Scheduler.sleep(5000,function(){ show_result(game);});
 	}
 
 	//流局
@@ -375,7 +365,7 @@ module Mahjong {
 	/** 重新开始游戏 */
 	private function restart(game){
 		Log.debug("Mahjong","restart game: {game.id}")
-		game = Game.restart(game,{false}) |> update(_)
+		game = Game.restart(game) |> update(_)
 		Network.broadcast({GAME_RESTART: Game.game_msg(game)},game.game_channel)
 	}
 
@@ -397,7 +387,7 @@ module Mahjong {
 	private function set_ok(game,idx){
 		game = {game with ok_flags: set_flag(game.ok_flags,idx)} |> update(_);
 		if(game.ok_flags == ALL_IS_OK){
-			game = Game.restart(game,{false}) |> update(_)
+			game = Game.restart(game) |> update(_)
 			Network.broadcast({GAME_RESTART: Game.game_msg(game)},game.game_channel)
 		}
 	}
@@ -560,22 +550,33 @@ module Mahjong {
 		}
 
 		result = LowLevelArray.create(4,[])
-		last_idx = game.curr_turn; //最后出牌玩家的index
-		is_zimo = (List.length(winners) == 1 && List.head(winners) == last_idx); //是否是自摸 
+		is_zimo = (List.length(winners) == 1 && List.head(winners) == game.curr_turn); //是否是自摸
 
 		//如果是自摸
 		result = if(is_zimo){
-			LowLevelArray.mapi(result)(function(i,r){
-				if(i == last_idx) List.add(ZIMO,r) else List.add(B_ZIMO,r)
+			LowLevelArray.mapi(result)(function(i,r){				
+				if(i == game.curr_turn){
+					n = if(game.dealer <= i*10000 || game.dealer >= (i+1)*10000) 1 else mod(game.dealer,10000)
+					List.add({ZIMO with ~n},r)
+				}else{
+					n = List.fold(function(i,n){
+						if(game.dealer <= i*10000 || game.dealer >= (i+1)*10000) n+1 else n+mod(game.dealer,10000)
+					},winners,0);
+					List.add({B_ZIMO with ~n},r)
+				}
 			});
 		}else{
 			LowLevelArray.mapi(result)(function(i,r){
 				//如果第i个玩家是winner，则添加一个胡牌的item 
 				if(List.exists(function(idx){ idx == i},winners)){
-					List.add(HOO,r)
+					n = if(game.dealer <= i*10000 || game.dealer >= (i+1)*10000) 1 else mod(game.dealer,10000)
+					List.add({HOO with ~n},r)
 				}else{
 					//如果是放炮
-					if(i != last_idx) r else List.add({FANGPAO with n: List.length(winners)},r)
+					n = List.fold(function(i,n){
+						if(game.dealer <= i*10000 || game.dealer >= (i+1)*10000) n+1 else n+mod(game.dealer,10000)
+					},winners,0);
+					if(i != game.curr_turn) r else List.add({FANGPAO with ~n},r)
 				}
 			});
 		}

@@ -86,12 +86,13 @@ var game;
 	  				if(key.indexOf('wav') == -1) continue;
 	  
 					var audio = new Audio();
-	  				countTotal++;
-	  				audio.addEventListener('canplay', audSuccessHandler, true);
+	  				audio.addEventListener('canplaythrough', audSuccessHandler, true);
       				audio.addEventListener('error', errorHandler, true);
       				audio.src = key;
       				audio.key = key;
 	  				audio.load();
+					
+					countTotal++;
    				}
 			}
    		}catch(e){
@@ -99,24 +100,6 @@ var game;
 			window.console.error("Error"+e);
    		}
    }
-
-   /** if(!!(a.canPlayType && a.canPlayType('audio/mpeg;').replace(/no/, ''))){
-    for( var i=0;i<audios.length;i++){
-	  var key = audios[i]
-	  if(key.indexOf('wav') == -1 &&
-		 key.indexOf('ogg') == -1) {
-		 continue;
-	  }
-	  
-	  var audio = new Audio();
-	  countTotal++;
-	  audio.addEventListener('canplay', audSuccessHandler, true);
-      audio.addEventListener('error', errorHandler, true);
-      audio.src = key;
-      audio.key = key;
-	  audio.load();
-   }
-   }*/
 }
 
 ##register get: string -> Image.image
@@ -233,8 +216,13 @@ var get_img = function(key){
 {
 	var snd = AUD_CACHE[key];
 	if(snd){
+		//注：如果不加snd.reload()，chrome好像无法重新播放声音，即只播放一次
+		//之后再不会播放，不知道啥原因，自从升级了chrome(18onlinux,21onwindows)
+		//就有这个问题。但不晓得这样每次播放都reload会不会带来系统负担。
+		//关注此问题！
+		snd.load();
 		snd.play();
-	}
+	}	
 }
 
 //两个参数，一个是cookie的名子，一个是值

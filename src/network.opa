@@ -71,7 +71,7 @@ module GameNetwork {
 		match(Map.get(game_id,map)){
 			case {some: channel} : channel
 			case {none} : {
-				channel = Network.cloud(game_id)
+				channel = Network.empty()
 				ServerReference.set(networks, StringMap_add(game_id, channel, map))
 				channel
 			}
@@ -89,7 +89,7 @@ module ChatNetwork {
 		match(Map.get(game_id,map)){
 			case {some: channel} : channel
 			case {none} : {
-				channel = Network.cloud(game_id)
+				channel = Network.empty()
 				ServerReference.set(networks, StringMap_add(game_id, channel, map))
 				channel
 			}

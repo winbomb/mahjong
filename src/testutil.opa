@@ -22,7 +22,7 @@ package mahjong
 
 server module TestUtil {
 	//四位玩家起到手的牌 (测试杠) 
-	HANDCARDS_BAK1 =[["1W","1W","1W","2W","2W","2W","3W","3W","3W","4W","4W","4W","5W","5W"],
+	HANDCARDS_BAK1 =[["1W","1W","1W","2W","2W","2W","3W","3W","3W","4W","4W","4W","5W","6W"],
 				["1B","1B","1B","1B","2B","2B","2B","2B","3B","3B","3B","3B","4B"],
 				["1T","1T","1T","1T","2T","2T","2T","2T","3T","3T","3T","3T","4T"],
 				["5W","8W","5W","5B","5B","5B","5T","5T","5T","6B","6B","6B","6B"]]
@@ -34,7 +34,7 @@ server module TestUtil {
 				["1W","2W","3W","1B","2B","3B","1T","2T","3T","9B","9B","5W","5W"]]
 	
 	//测试听牌的bug
-	HANDCARDS_BAK = [["8W","8W","8W","9B","9B","9B","6B","7B","8B","1T","2T","5T","5T","5T"],
+	HANDCARDS_BAK3 = [["8W","8W","8W","9B","9B","9B","6B","7B","8B","1T","2T","5T","5T","5T"],
 				["1B","1B","1B","2B","2B","2B","3B","3B","3B","6W","7W","8B","8B"],
 				["1T","1T","4T","2T","2T","4T","3T","3T","3T","6W","7W","8T","8T"],
 				["1W","2W","3W","1B","2B","3B","1T","2T","3T","4B","4B","5W","5W"]]
@@ -81,8 +81,8 @@ server module TestUtil {
 		left_cards = List.fold(function(p,c){
 			trans_card(p) +> c
 		},CARD_PILE,[]);
-		{board with ~decks, card_pile: left_cards}; //用CARD_PILE作为剩下的牌(用于快速结束游戏)
-		//{board with ~decks, card_pile: card_pile.get()}
+		//{board with ~decks, card_pile: left_cards}; //用CARD_PILE作为剩下的牌(用于快速结束游戏)
+		{board with ~decks, card_pile: card_pile.get()}
 	}
 	
 	/**

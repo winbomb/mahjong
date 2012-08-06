@@ -53,8 +53,7 @@ function game_view(game_id,need_bot){
 			case {some:idx}:{
 				match(ThreadContext.get({current}).key){
 					case {`client`:c}: {
-						player = {player with idx: idx}
-						player = {player with status: {online}}
+						player = {player with ~idx,status:{online}} 
 						LowLevelArray.set(game.players,idx,some(player))
 						LowLevelArray.set(game.clients,idx,some(c));
 						game = if(need_bot) Game.add_bots(game) else game;

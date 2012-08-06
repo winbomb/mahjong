@@ -55,18 +55,21 @@ get_game = %%engine2d.get_game%%;
 
 PREFIX = "/resources/"
 
-function get_ctx(id){
+SCR_WD = 740;	//游戏屏幕的宽度（原始比例）
+SCR_HT = 625;	//游戏屏幕的高度（原始比例）
+
+client function get_ctx(id){
 	canvas = Canvas.get(id);
 	Option.get(Canvas.get_context_2d(Option.get(canvas)));
 }
 	
 /** 获得图片资源 */
-function get(key){
+client function get(key){
 	{image: %%engine2d.get%%(PREFIX ^ key)}
 }
 
 /** 预加载图片和声音资源 */
-function preload(imgs,auds,f){
+client function preload(imgs,auds,f){
 	imgs = List.map(function(img){
 		PREFIX ^ img
 	},imgs);
@@ -76,7 +79,7 @@ function preload(imgs,auds,f){
 	%%engine2d.preload%%(imgs,auds,f);
 }
 
-function play_sound(key){
+client function play_sound(key){
 	%%engine2d.play_sound%%(PREFIX ^ key);
 }
 
@@ -132,7 +135,20 @@ client module Render {
 			case {Wan}: if(g_show_classic_tile.get()) 100 else 150
 		}
 	}
-	
+
+	function get_dealer(game){
+		//绘制当前局数和庄家
+		if(game.dealer >= 0 && game.dealer <= 9999) "EAST" else{
+			if(game.dealer >= 10000 && game.dealer <= 20000) "SOUTH" else{
+				if(game.dealer >= 20000 && game.dealer <= 29999) "WEST" else{
+					if(game.dealer >= 30000 && game.dealer <= 39999) "NORTH" else{
+						"UNKNOWN"
+					}
+				}
+			}
+		}
+	}
+
 	function refresh(){
 		ctx = get_ctx(#gmcanvas);
 		game = get_game();
@@ -141,7 +157,7 @@ client module Render {
 		clear_bg(ctx,game);
 
 		//绘制玩家信息
-		draw_player_info(ctx,game.players,game.idx);
+		draw_player_info(ctx,game);
 		
 		if(game.status == {prepare} || ( game.status == {show_result} && game.is_ok)){	
 			draw_prepare(ctx,game,game.idx);				//绘制牌堆
@@ -156,6 +172,10 @@ client module Render {
 			draw_pileinfo(ctx,game.pile_info,game.idx);  	//绘制牌堆信息
 			draw_board_info(ctx,game,game.player);			//指示当前玩家
 		}
+
+		Canvas.set_fill_style(ctx,BLUE);
+		Canvas.set_font(ctx,"normal bold 18px serif");
+		Canvas.fill_text(ctx,"ROUND {game.round} {get_dealer(game)}",5,25);
 
 		//绘制调试信息
 		if(DEBUG) show_game_info(ctx,game);
@@ -186,15 +206,19 @@ client module Render {
 	/**
 	* 绘制玩家信息
 	*/
-	function draw_player_info(ctx,players,idx){
+	function draw_player_info(ctx,game){
 		INFO_POS = [{x:110,y:498},{x:50,y:298},{x:680,y:25},{x:685,y:298}]
 		Canvas.save(ctx)
 		Canvas.set_fill_style(ctx,{color:Color.rgb(13,30,40)})
 		Canvas.set_font(ctx,"normal bold 14px serif");
 		Canvas.set_text_align(ctx,{align_center});
+
+		players = game.players; dealer = game.dealer; idx = game.idx;
 		LowLevelArray.iteri(function(i,p){
 			rel_pos = Board.get_rel_pos(idx,i);
 			pos = Option.get(List.get(rel_pos,INFO_POS));
+			is_dealer = (dealer >= i*10000 && dealer <= i*10000 + 9999)
+			n = mod(dealer,10000);
 			match(p){
 				case ~{some}:{
 					match(rel_pos){
@@ -202,24 +226,40 @@ client module Render {
 							Canvas.draw_image(ctx,get("player_frame_v.png"),640,215);
 							Canvas.draw_image(ctx,get("portrait.jpg"),659,227);
 							Canvas.draw_image_full(ctx,get("eswn.png"),30*i,0,30,30,pos.x+10,pos.y+40,30,30);
+							if(is_dealer){
+								Canvas.draw_image_full(ctx,get("eswn.png"),120,0,30,30,pos.x-45,pos.y+40,30,30);
+								Canvas.fill_text(ctx,"x{n}",pos.x-5,pos.y+70);
+							}
 							if(some.status != {online}) Canvas.draw_image(ctx,get("offline.png"),645,220)
 						}
 						case 2: {
 							Canvas.draw_image(ctx,get("player_frame_h.png"),575,0);
 							Canvas.draw_image(ctx,get("portrait.jpg"),587,10);
 							Canvas.draw_image_full(ctx,get("eswn.png"),30*i,0,30,30,pos.x+20,pos.y+45,30,30);
+							if(is_dealer){
+								Canvas.draw_image_full(ctx,get("eswn.png"),120,0,30,30,pos.x-40,pos.y+45,30,30);
+								Canvas.fill_text(ctx,"x{n}",pos.x+5,pos.y+75);
+							}
 							if(some.status != {online}) Canvas.draw_image(ctx,get("offline.png"),580,5)
 						}
 						case 1: {
 							Canvas.draw_image(ctx,get("player_frame_v.png"),5,215);
 							Canvas.draw_image(ctx,get("portrait.jpg"),24,227);
 							Canvas.draw_image_full(ctx,get("eswn.png"),30*i,0,30,30,pos.x-40,pos.y+40,30,30);
+							if(is_dealer){
+								Canvas.draw_image_full(ctx,get("eswn.png"),120,0,30,30,pos.x-5,pos.y+40,30,30);
+								Canvas.fill_text(ctx,"x{n}",pos.x+35,pos.y+70);
+							}
 							if(some.status != {online}) Canvas.draw_image(ctx,get("offline.png"),10,220)
 						}
 						default: {
 							Canvas.draw_image(ctx,get("player_frame_h.png"),5,470);
 							Canvas.draw_image(ctx,get("portrait.jpg"),17,480);
 							Canvas.draw_image_full(ctx,get("eswn.png"),30*i,0,30,30,pos.x+55,pos.y+10,30,30);
+							if(is_dealer){
+								Canvas.draw_image_full(ctx,get("eswn.png"),120,0,30,30,pos.x+55,pos.y-25,30,30);
+								Canvas.fill_text(ctx,"x{n}",pos.x+95,pos.y+5);
+							}
 							if(some.status != {online}) Canvas.draw_image(ctx,get("offline.png"),10,475)
 						}
 					}
@@ -404,9 +444,7 @@ client module Render {
 				}
 			}
 		}
-
-		//绘制当前局数和庄家
-		//Canvas.fill_text(ctx,"ROUND {game.round+1} EAST",15,15);
+		Canvas.restore(ctx);
 	}
 
 	/**
@@ -581,7 +619,7 @@ client module Render {
 						case 1: draw_wall(ctx,rel_pos,164,130+20*i,{true}); 
 						case 2: draw_wall(ctx,rel_pos,202+i*24,53 ,{true});
 						case 3: draw_wall(ctx,rel_pos,548,130+20*i,{true});
-						case _: draw_wall(ctx,rel_pos,202+i*24,453,{true});
+						case _: draw_wall(ctx,rel_pos,202+i*24,445,{true});
 					}
 				}
 				case "1": {
@@ -589,7 +627,7 @@ client module Render {
 						case 1: draw_wall(ctx,rel_pos,164,136+20*i,{false}); 
 						case 2: draw_wall(ctx,rel_pos,202+i*24,58 ,{false});
 						case 3: draw_wall(ctx,rel_pos,548,136+20*i,{false});
-						case _: draw_wall(ctx,rel_pos,202+i*24,458,{false});
+						case _: draw_wall(ctx,rel_pos,202+i*24,450,{false});
 					}
 				}
 				default: void
