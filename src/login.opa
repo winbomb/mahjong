@@ -60,12 +60,6 @@ function is_logged_in(){
 	}
 }
 
-A = function(user_compat){
-	"U"
-}
-
-
-
 module Login {
 	
 	function get_agent(user_compat){
@@ -107,50 +101,21 @@ module Login {
 		if(not(String.is_empty(login_name))){
 			Dom.set_value(#username,login_name);
 		}
-		jlog("width = {Client.width()}, height = {Client.height()}");
 	}
 
 	function login_view(){
-		/** r = Resource.styled_page("China Mahjong", ["/resources/main.css"],
-			<>
-			<div id="container" onready={function(_){page_ready()}}>
-				<div id="content">
-					<div id=#login_box>
-						<h1> Login </h1>
-						<input id=#username type="text" class="input-xlarge" placeholder="Enter a nickname"
-						 	   onnewline={function(_){attempt_login()}}/>
-						<button class="btn btn-primary btn-large" style="margin-top:10px" onclick={function(_){attempt_login()}}>Play</button>
-						<hr style="margin-bottom:5px">
-						<p>Note: This game need HTML5 canvas support, please use IE9+, Firefox4+, Chrome10+, Opera11+, Safari5+</p>
-						<div style="padding:0px 5px">
-							<button class="btn btn-info" style="float:left;width:60px;"
-							onclick={function(_){Tutor.show_tutor()}}>Tutorial</button>
-							<button class="btn btn-info" style="width:120px">Add to Chrome</button>
-							<a class="btn btn-info" style="float:right;width:105px;" 
-								href="https://github.com/winbomb/mahjong" target="_blank">Fork on Github</a>
-						</div>
-    	    		</div>
-				</div>
-				<div id="footer">
-					<p>Build with <a target="_blank" href="http://www.opalang.org">Opa</a></p>
-					<p>Any Feedback, please mail to: <a href="mailto:li.wenbo@whu.edu.cn">li.wenbo@whu.edu.cn</a></p>
-				</div>
-			</div>			
-			</>
-        ); */
-		
 		Resource.full_page("China Mahjong",
 			<>
 			<div id="container" onready={function(_){page_ready()}}>
 				<div id="content">
 					<div id=#login_box>
 						<h1> Login </h1>
-						<input id=#username type="text" class="input-xlarge" placeholder="Enter a nickname"
+						<input id=#username type="text" class="input-xlarge txt_user" placeholder="Enter a nickname"
 						 	   onnewline={function(_){attempt_login()}}/>
-						<button class="btn btn-primary btn-large" style="margin-top:10px" onclick={function(_){attempt_login()}}>Play</button>
+						<button class="btn btn-primary btn-large btn_play" onclick={function(_){attempt_login()}}>Play</button>
 						<hr style="margin-bottom:5px">
 						<p>Note: This game need HTML5 canvas support, please use IE9+, Firefox4+, Chrome10+, Opera11+, Safari5+</p>
-						<div style="padding:0px 5px">
+						<div id=#btn_group style="padding:0px 5px">
 							<button class="btn btn-info" style="float:left;width:60px;"
 							onclick={function(_){Tutor.show_tutor()}}>Tutorial</button>
 							<button class="btn btn-info" style="width:120px">Add to Chrome</button>
@@ -158,16 +123,19 @@ module Login {
 								href="https://github.com/winbomb/mahjong" target="_blank">Fork on Github</a>
 						</div>
     	    		</div>
-				</div>
-				<div id="footer">
-					<p>Build with <a target="_blank" href="http://www.opalang.org">Opa</a></p>
-					<p>Any Feedback, please mail to: <a href="mailto:li.wenbo@whu.edu.cn">li.wenbo@whu.edu.cn</a></p>
-				</div>
+				</div>				
+			</div>
+			<div id="footer">
+				<p>Build with <a target="_blank" href="http://www.opalang.org">Opa</a></p>
+				<p>Any Feedback, please mail to: <a href="mailto:li.wenbo@whu.edu.cn">li.wenbo@whu.edu.cn</a></p>
 			</div>
 			</>,
 			<>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-			<link rel="stylesheet" type="text/css" href="/resources/main.css">
+			<link rel="stylesheet" type="text/css" href="/resources/css/main_small.css"
+				  media="only screen and (min-width:240px) and (max-width:800px)">
+			<link rel="stylesheet" type="text/css" href="/resources/css/main.css" media="only screen and (min-width:800px)">
+			<link rel="apple-touch-icon" sizes="72x72" href="/resources/mahjong-48.png" />
 			</>,
 			{success},[]
 		);

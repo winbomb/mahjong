@@ -152,7 +152,7 @@ module Game {
 		Scheduler.timer(2000,function(){
 			timestamp = Date.in_milliseconds(Date.now());
 			Map.iter(function(_,game){
-				if(timestamp - game.last_act >= 12000){
+				if(game.last_act != 0 && timestamp - game.last_act >= 12000){
 					match(game.status){
 						case {select_action}: Mahjong.default_action(game);
 						case {wait_for_resp}: Mahjong.do_action(game);
@@ -379,32 +379,46 @@ module Game {
 			}
 		}
 	}
+	
+	// 获得鼠标点击事件在画布上的坐标 
+	client function get_pos(event){
+		canvas_pos = Dom.get_position(#container);
+		mouse_pos = event.mouse_position_on_page;
+		s = Render.g_scale.get();
+		x = Float.to_int(Float.of_int(mouse_pos.x_px - canvas_pos.x_px) / s);
+		y = Float.to_int(Float.of_int(mouse_pos.y_px - canvas_pos.y_px) / s);
+		if(Render.g_rotate.get()){
+			x = x + 300; y = y + 400;
+			{x:y, y: Render.SRN_HEIGHT - x}
+		}else{
+			x = x + 400; y = y + 300;
+			~{x,y}
+		}
+	}
 
 	/**
 	* 处理鼠标点击的事件 
 	*/
-	client function process(event){
-		game = get_game();
-		if(game.status == {prepare} || game.status == {wait_for_resp} 
-			|| game.status == {show_result} || game.curr_turn == game.idx){
-			// 获得鼠标点击事件在画布上的坐标 
-			canvas_pos = Dom.get_position(#gmcanvas);
-			mouse_pos = event.mouse_position_on_page;	
-			x = mouse_pos.x_px - canvas_pos.x_px;
-			y = mouse_pos.y_px - canvas_pos.y_px;
-			x = x * 2;
-			y = y * 2;
-			pos = ~{x,y}
-			action = Mahjong.get_action(pos,game);
-			match(action){
-				case {none}: void
-				default: {
-					Render.refresh();
-					Mahjong.request_action(game.id,game.idx,action);
+	client function mouse_down(event){
+		pos = get_pos(event);
+		if(Button.is_pressed(pos,Render.btn_exit)){
+			//退出游戏
+			Client.goto("/hall");
+		}else{
+			game = get_game();
+			if(game.status == {prepare} || game.status == {wait_for_resp} 
+				|| game.status == {show_result} || game.curr_turn == game.idx){
+				action = Mahjong.get_action(pos,game);
+				match(action){
+					case {none}: void
+					default: {
+						Render.refresh();
+						Mahjong.request_action(game.id,game.idx,action);
+					}
 				}
 			}
-		} 
-	}	
+		}
+	}
 
 	/**
 	* 收到游戏消息后的处理函数
@@ -430,12 +444,10 @@ module Game {
 			case {GAME_RESTART: game_msg}:{
 				Render.update(game_msg);
 				Render.refresh();
-				refresh_players(game_msg.pls);
 			}
 			case {PLAYER_CHANGE: game_msg}:{
 				Render.update(game_msg);
 				Render.refresh();
-				refresh_players(game_msg.pls);
 			}
 			case {DISCARD_CARD: msg}:{  //玩家弃牌消息
 				play_sound("da.wav");
@@ -485,16 +497,15 @@ module Game {
 					case {none}: {
 						set_game(game);
 						Render.refresh();
-						Render.show_draw_play(game,195,75);
+						Render.show_draw_play(game,225,75);
 					}
 					case ~{some}: {
 						players = Mahjong.update_scores(game.players,some);
 						set_game({game with ~players}); 
-						refresh_players(players);
 						
 						play_sound("countfan.wav");
 						Render.refresh();
-						Render.show_result(game,some,195,75);
+						Render.show_result(game,some,225,75);
 					}
 				}
 			}
@@ -512,7 +523,6 @@ module Game {
 				});
 				set_game({game with ~players});
 				Render.refresh();
-				refresh_players(players);
 			}
 			case {PLAYER_READY: ready_flags}:{
 				game = {get_game() with ~ready_flags};
@@ -530,53 +540,6 @@ module Game {
 		line = <li><div class="author">{msg.author}: </div>{msg.text} </li>
 		#chat_messages =+ line
 		Dom.scroll_to_bottom(#chat_messages)
-	}
-	
-	client function game_ready(game,player){
-		//加载资源
-		imgs = ["table_bg.png","board.png","result.png","arrow.png","win.png","menu_bar.png","ting.png","dialog.png",
-				"tiles.png","tiles_small.png","numbers.png","start.png","offline.png","player_frame_h.png","player_frame_v.png",
-				"portrait.jpg","eswn.png","btn_tutor.png"];
-		auds = ["start.wav","da.wav","pung.wav","countfan.wav","win.wav"];
-		preload(imgs,auds,function(){
-			Dom.set_value(#loading_info,"prepare game...");
-			game_obs = Network.observe(game_msg_received,game.game_channel);
-			chat_obs = Network.observe(user_update,game.chat_channel);
-			
-			ck_player = get_cookie("player");
-			ck_coins = get_cookie("coins");
-			coins = if(ck_player != player.name || String.is_empty(ck_coins)) DEFAULT_COINS else string_to_int(ck_coins);
-			player = {player with coins: coins};
-
-			game = update_player(game,player);
-			set_game(game_obj(game,player));
-			refresh_players(game.players);
-			
-			//离开页面的提示（对Opera无效）
-			Dom.bind_beforeunload_confirmation(function(_){
-				{some: "Are you sure to quit?"}
-			});
-			Dom.bind_unload_confirmation(function(_){
-				Mahjong.quit(game.id,player.idx);
-				Network.unobserve(game_obs);
-				Network.unobserve(chat_obs);
-				{none}
-			});
-				
-			//广播游戏信息
-			Network.broadcast({PLAYER_CHANGE: game_msg(game)},game.game_channel);
-			
-			//去掉#gamecanvas的loading样式
-			Render.refresh();
-			Dom.remove(#gmloader);			
-		});
-
-		if(AUTO_READY || player.is_bot) Mahjong.set_ready(game,player.idx);
-
-		//缩放Canvas到合适比例
-		canvas = Canvas.get(#gmcanvas);
-		ctx = Option.get(Canvas.get_context_2d(Option.get(canvas)));
-		Canvas.scale(ctx,0.5,0.5);
 	}
 	
 	/**
@@ -628,77 +591,114 @@ module Game {
 			}}
 		},game.players,{none});		
 	}
+
+	client function load_page(game,idx){
+		lang = I18n.lang();
+		if(String.has_prefix(lang,"zh") || String.has_prefix(lang,"jp")
+		   || String.has_prefix(lang,"tw") || String.has_prefix(lang,"hk")){
+				Render.g_zh.set({true})
+		}else Render.g_zh.set({false})
+
+		//加载资源
+		imgs = ["actions.png","table_bg.png","board.png","result.png","arrow.png","win.png","en_menu_bar.png","cn_menu_bar.png",
+				"ting.png","dialog.png","tiles.png","tiles_small.png","numbers.png","start.png","offline.png","player_frame_h.png",
+				"player_frame_v.png","portrait.jpg","eswn.png","btn_tutor.png","exit.png","setting.png"];
+		auds = ["start.wav","da.wav","pung.wav","countfan.wav","win.wav"];
+
+		player = Option.get(LowLevelArray.get(game.players,idx));
+		preload(imgs,auds,function(){
+			Dom.set_value(#loading_info,"prepare game...");
+			game_obs = Network.observe(game_msg_received,game.game_channel);
+			chat_obs = Network.observe(user_update,game.chat_channel);
+			
+			ck_player = get_cookie("player");
+			ck_coins = get_cookie("coins");
+			coins = if(ck_player != player.name || String.is_empty(ck_coins)) DEFAULT_COINS else string_to_int(ck_coins);
+			player = {player with coins: coins};
+
+			game = update_player(game,player);
+			set_game(game_obj(game,player));
+			
+			//离开页面的提示（对Opera无效）
+			Dom.bind_beforeunload_confirmation(function(_){
+				{some: "Are you sure to quit?"}
+			});
+			Dom.bind_unload_confirmation(function(_){
+				Mahjong.quit(game.id,player.idx);
+				Network.unobserve(game_obs);
+				Network.unobserve(chat_obs);
+				{none}
+			});
+				
+			//广播游戏信息
+			Network.broadcast({PLAYER_CHANGE: game_msg(game)},game.game_channel);
+			
+			if(Render.g_zh.get()) Render.g_show_classic_tile.set({true});
+
+			//去掉#gamecanvas的loading样式
+			Render.adjust();
+			Render.refresh();
+			Dom.remove(#gmloader);		
+		});
+		
+		if(AUTO_READY || player.is_bot) Mahjong.set_ready(game,player.idx);
+	}
+
+	function game_ready(game,idx){
+		load_page(game,idx);
+
+		_ = ClientEvent.set_on_disconnect_client(function(ctx){
+			//如果ctx和game的第idx个client一致，说明这个玩家处于死链接状态，去除之。
+			with_game(game.id,function(game){
+				match(LowLevelArray.get(game.clients,idx)){
+					case {none}: void
+					case {some:c}:{
+						if(c.client == ctx.client && c.page == ctx.page){
+							Mahjong.quit(game.id,idx);
+						}
+					}
+				}
+			});
+		});
+
+		void;
+	}
 	
 	/** 
 	* 游戏视图
 	*/
 	function game_view(game,idx){
-		//更新第idx个玩家的client_ctx
-		player = Option.get(LowLevelArray.get(game.players,idx));			
-		Resource.styled_page("Mahjong",["/resources/style.css"],
+		player = Option.get(LowLevelArray.get(game.players,idx));
+		Resource.full_page("Mahjong",
 			<>
-			<div class="game" onready={function(_){
-				_ = ClientEvent.set_on_disconnect_client(function(ctx){
-					//如果ctx和game的第idx个client一致，说明这个玩家处于死链接状态，去除之。
-					with_game(game.id,function(game){
-						match(LowLevelArray.get(game.clients,idx)){
-							case {none}: void
-							case {some:c}:{
-								if(c.client == ctx.client && c.page == ctx.page){
-									Mahjong.quit(game.id,idx);
-								}
-							}
-						}
-					});
-				});
-				game_ready(game,player);
-			  }}>	
-			  <div class="canvas">
+			<div class="game" onready={function(_){game_ready(game,idx)}}>
+			  <div id=#container>
 			  	<div id=#gmloader >
 					<p id=#loading_info>loading</p>
 				</div>
-			  	<canvas id=#gmcanvas width="740" height="625"
-					onmousedown={function(event){ process(event) }}>
+			  	<canvas id=#gmcanvas width="800" height="600" 
+					onmousedown={function(event){mouse_down(event)}}>
 					"Your browser does not support html5 canvas element."
 				</canvas>
 			  </div>
-			  <div id=#gameinfo>
-				<div id=#panel>
-					<div style="float:left;text-align:left;width:45%">
-						<div>
-							<input type="checkbox" style="margin:0px" onclick={function(_){Render.show_or_hide_number()}}/>
-							<span>show number</span>
-						</div>
-						<div>
-							<input type="checkbox" style="margin:0px" onclick={function(_){Render.change_tile_style()}}/>
-							<span>classic tile</span>
-						</div>
-					</div>
-					<div style="float:right;margin:4px">
-						<input type="button" class="btn btn-info" value="Back" onclick={function(_){ Client.goto("/hall")} }/>
-					</div>
-				</div>
-				<div id=#scores>
-					<div class="score_left"><h2>{player.name}</h2></div>
-					<div class="score_middle">[{Board.idx_to_place(player.idx)}]</div>
-					<div class="score_right"><h2 id=#txt_score>{player.coins}</h2></div>
-				</div>
-				<div id=#players>
-					<table id=#tb_players></table>
-				</div>
-				<div class="chat">
-					<ul id="chat_messages"></ul>
-					<div class="input">
-						<input type="text" id=#entry class="input-large"
-								onnewline={function(_){post_chat_msg(player.name,game.chat_channel)}} placeholder="Your Message Here"/>
-						<input id=#post type="button" class="btn btn-primary" value="post"
-								onclick={function(_){post_chat_msg(player.name,game.chat_channel)}}/>
-					</div>
+			  <div id="chat">
+			  	<div id="chat_title">Chat</div>
+				<div id="chat_box">
+					<ul id=#chat_messages></ul>
+					<input id=#entry type="text" class="chat_textbox" 
+					onnewline={function(_){post_chat_msg(player.name,game.chat_channel)}}></input>
 				</div>
 			  </div>
-			</div>
-			</>
-		);
+			</div>		
+			</>,
+			<>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+			<link rel="stylesheet" type="text/css" href="/resources/css/game.css" media="only screen and (min-width:800px)">
+			<link rel="stylesheet" type="text/css" href="/resources/css/game_small.css"
+				  media="only screen and (min-width:240px) and (max-width:800px)">
+			</>,
+			{success},[]
+		); 
 	}
 
 	@async function post_chat_msg(author,channel){
@@ -707,35 +707,6 @@ module Game {
 			Dom.clear_value(#entry)
 			Network.broadcast(~{author,text},channel)
 		}
-	}
-
-	client function refresh_players(players){
-		Dom.remove_content(#tb_players);
-		LowLevelArray.iteri(function(i,player){
-			match(player){
-				case {none}: void
-				case ~{some}: {
-					self_idx = get_game().idx;
-					table_row = if(self_idx == i) {
-						//更新得分
-						set_cookie("player",some.name);
-						set_cookie("coins",int_to_string(some.coins));
-						#txt_player = "{some.name}"
-						#txt_score = "{some.coins}";
-						<tr class="self_row">
-							<td width="160px"> {some.name} </td>
-							<td width="80px"> {some.coins} </td>
-						</tr>
-					}else {
-						<tr>
-							<td width="160px"> {some.name} </td>
-							<td width="80px"> {some.coins} </td>
-						</tr>
-					}
-					#tb_players =+ table_row
-				}
-			}
-		},players);
 	}
 
 	/** 开始游戏 */
@@ -785,6 +756,25 @@ module Game {
 
 		{game with ~players, ~ready_flags, ~round, ~dealer, ~curr_turn,
 		 ok_flags:0, change_flag:{true}} |> Mahjong.reset_actions(_);
+	}
+
+	function reset(game){
+		{game with 
+			status:			 {prepare},
+			winners:         [],
+			curr_turn:       0,
+			last_act:        0,
+			ready_flags: 	 0,
+			ok_flags:		 0,
+			round:			 1,
+			dealer:			 1,
+			change_flag:     {false},
+			curr_card:       {none},
+			players:         LowLevelArray.create(4,{none}),
+			clients:         LowLevelArray.create(4,{none}),
+			actions:         LowLevelArray.create(4,{none}),
+			board:           Board.create()
+		}		
 	}
 
 	/** 获取某个玩家的deck */

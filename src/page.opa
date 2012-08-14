@@ -94,7 +94,7 @@ module Page {
 	}
 
 	function game_list_view(){
-		Resource.styled_page("Welcome to play China Mahjong",["/resources/page.css"],
+		Resource.full_page("China Mahjong",
 			<>
 			<div class="dragon_bg"></div>
 			<div id="game_list" onready={function(_){ page_ready()}} >
@@ -135,7 +135,14 @@ module Page {
 					</table>
 				</div>
 			</div>
-			</>
+			</>,
+			<>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+			<link rel="stylesheet" type="text/css" href="/resources/css/page.css" media="only screen and (min-width:800px)">
+			<link rel="stylesheet" type="text/css" href="/resources/css/page_small.css"
+				  media="only screen and (min-width:240px) and (max-width:800px)">
+			</>,
+			{success},[]
 		);
 	}
 }

@@ -72,6 +72,7 @@ server module Bot {
 	* 从手牌中选择一张弃掉
 	**/
 	function play(game,idx){
+		Log.debug("Bot","gameid = {game.id}, game.status = {game.status}");
 		deck = LowLevelArray.get(game.board.decks,idx);
 		//如果能胡，胡之
 		if(Board.can_hoo_self(deck)) Mahjong.request_action(game.id,idx,{hoo}) else {

@@ -1,0 +1,46 @@
+* {
+	margin: 0px;
+	padding: 0px;
+}
+
+body {
+	background:	url("/resources/page_bg.jpg") repeat #0c1e28;
+}
+
+.dragon_bg {
+	background: url("/resources/dragon_small.jpg") no-repeat scroll center top #0C1E28;
+	margin: 0px auto;
+}
+
+#game_list {
+	background: #0C1E28;
+	margin: 10px auto;
+	width: 92%;
+	border: 3px solid red;
+	padding: 5px;
+}
+
+.quick-start {
+	clear: both;
+	float: right;
+	margin: 5px 0px;
+}
+
+.title {
+	color: WHITE;
+	float: right;	
+}
+
+.tb_game_list {
+	background: WHITE;
+	width: 100%;
+	border: 1px solid RED;
+}
+
+.tb_game_list th, .tb_game_list td {
+    border-right: 1px solid black;
+	border-bottom: 1px solid black;
+    padding: 2px;
+    text-align: center;
+    vertical-align: middle;
+}

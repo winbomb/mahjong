@@ -192,14 +192,14 @@ module Mahjong {
    client function get_clicked_card(deck,pos){
 		done = List.length(deck.donecards);
 		hand = List.length(deck.handcards);
-		start_x = 28 + 140*done;
-		b_bound = Button.bound(pos,start_x,545,45*hand+30,70);
+		start_x = 5 + 165*done;
+		b_bound = Button.bound(pos,start_x,505,55*hand+20,90);
 
 		if(not(b_bound)) {none} else{
-			if((pos.x >= start_x + (hand - 1)*45 + 30) && (pos.x <= start_x + hand*45 + 30)){
+			if((pos.x >= start_x + (hand - 1)*55 + 20) && (pos.x <= start_x + hand*55 + 20)){
 				List.get(hand-1,deck.handcards)
 			}else{
-				n = (pos.x - start_x) / 45;
+				n = (pos.x - start_x) / 55;
 				List.get(n,deck.handcards);
 			}
 		}
@@ -212,7 +212,7 @@ module Mahjong {
 		deck = LowLevelArray.get(game.board.decks,idx);
 		card_cnt = List.length(deck.handcards) + List.length(deck.donecards)*3
 		if(card_cnt <= 13){
-			Log.warning("Mahjong","Try to discard card, but only has 13 cards.");
+			Log.warning("Mahjong","GameId = {game.id}, idx = {idx}. Try to discard card, but only has 13 cards.");
 		}else{
 			game = {game with board: Board.discard(game.board,idx,card),
 					status:{wait_for_resp},
@@ -405,6 +405,7 @@ module Mahjong {
 				default: {client:"",page:0}
 			}
 			
+			Log.debug("Mahjong","QUIT: gameid = {game_id}, idx = {idx}");
 			if(ctx.client == clnt.client && ctx.page == clnt.page){
 				ready_flags = clear_flag(game.ready_flags,idx);
 				game = {game with ~ready_flags, change_flag:{true}}
@@ -416,8 +417,8 @@ module Mahjong {
 
 					//如果游戏的player都离开了，则结束游戏。
 					if(Game.get_online_cnt(game.players) == 0){
-						game = {game with ready_flags:0,players: LowLevelArray.create(4,{none})}; //清空玩家
-						restart(game);
+						game = Game.reset(game) |> update(_);
+						Network.broadcast({GAME_RESTART: Game.game_msg(game)},game.game_channel)
 					}
 				} else {
 					players = LowLevelArray.mapi(game.players)(function(i,p){
@@ -432,12 +433,10 @@ module Mahjong {
 
 					//如果游戏的player都离开了，则结束游戏。
 					if(Game.get_online_cnt(game.players) == 0){
-						game = {game with ready_flags:0,players: LowLevelArray.create(4,{none})}; //清空玩家
-						restart(game);
+						game = Game.reset(game) |> update(_);
+						Network.broadcast({GAME_RESTART: Game.game_msg(game)},game.game_channel)
 					}
 				}
-			}else{
-				jlog("QUIT Canceled.");
 			}
 		});
 	}
@@ -622,29 +621,35 @@ module Mahjong {
 	/** 下一个玩家 */
 	function next_turn(game_id){
 		with_game(game_id,function(game){
-			//如果已经没有牌了，游戏结束，流局
-			if(List.length(game.board.card_pile) == 0) draw_play(game) else {
-				//将当前牌加入到弃牌堆
-				board = match(game.curr_card){
-					case {none}: game.board
-					case {some:card}: Board.add_to_discards(game.board,game.curr_turn,card)
-				}
+			//第一个判断online人数是因为玩家quit游戏之后，可能还有定时器的next_turn没有执行
+			//如果不做判断，很可能这个next_turn将会改变原来game变量的值。
+			if(Game.get_online_cnt(game.players) == 0) void else {
+				//如果已经没有牌了，游戏结束，流局
+				if(List.length(game.board.card_pile) == 0) draw_play(game) else {
+					//将当前牌加入到弃牌堆
+					board = match(game.curr_card){
+						case {none}: game.board
+						case {some:card}: Board.add_to_discards(game.board,game.curr_turn,card)
+					}
 				
-				//更新游戏状态
-				game = {game with ~board, status:{select_action}, curr_turn: Board.get_next_idx(game.curr_turn)}
-				game = {game with board: Board.deal_card(game.board,game.curr_turn), curr_card: {none}} |> update(_);
+					//更新游戏状态
+					game = {game with ~board, status:{select_action}, curr_turn: Board.get_next_idx(game.curr_turn)}
+					game = {game with board: Board.deal_card(game.board,game.curr_turn), curr_card: {none}} |> update(_);
 				
-				//广播游戏消息				
-				Network.broadcast({NEXT_TURN: Game.game_msg(game)},game.game_channel);
+					//广播游戏消息				
+					Network.broadcast({NEXT_TURN: Game.game_msg(game)},game.game_channel);
 				
-				//如果当前玩家为状态不为{online},则1s钟之后自动弃牌
-				match(LowLevelArray.get(game.players,game.curr_turn)){
-					case {none}: Scheduler.sleep(1000,function(){ default_action(game)}); 
-					case {some:player}:{
-						if(player.is_bot == {false} && player.status != {online}) {
-							Scheduler.sleep(1000,function(){ default_action(game)});
-						}else{
-							if(player.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,game.curr_turn)});
+					//如果当前玩家为状态不为{online},则1s钟之后自动弃牌
+					match(LowLevelArray.get(game.players,game.curr_turn)){
+						case {none}: Scheduler.sleep(1000,function(){
+							default_action(game)
+						}); 
+						case {some:player}:{
+							if(player.is_bot == {false} && player.status != {online}) {
+								Scheduler.sleep(1000,function(){ default_action(game)});
+							}else{
+								if(player.is_bot) Scheduler.sleep(1000,function(){Bot.play(game,game.curr_turn)});
+							}
 						}
 					}
 				}

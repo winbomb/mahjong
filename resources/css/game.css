@@ -1,0 +1,124 @@
+* {
+	margin: 0
+	padding: 0
+}
+
+body {
+	background: url("/resources/page_bg.jpg") repeat wheat;
+	color: #DDD;
+	font-size: 13px;
+	line-height: 120%;
+	text-align: center;
+}
+
+div {
+	display: block;
+}
+
+.game{
+	margin: 0 auto;
+}
+
+#container {
+	position: absolute;
+	width: 800px;
+	height: 600px;
+	left: 50%;
+	top: 50%;
+	margin-left: -400px;
+	margin-top: -300px;
+	border-color: #333333;
+    border-radius: 0.3em 0.3em 0.3em 0.3em;
+    border-style: solid;
+    border-width: 2px;
+    box-shadow: 0 0 5px blue, 0 25px 5px rgba(255, 255, 255, 0.1) inset;
+}
+
+#chat {
+	width: 225px;
+	text-align: left;
+	position: absolute;
+	bottom: 0px;
+	background: #5C5C5C;
+	background: rgba(92, 92, 92, 0.5);
+	border: 1px solid #444;
+	border-radius: 0.3em 0.3em 0.3em 0.3em;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.7);
+}
+
+#chat_title {
+	padding: 8px;
+	background: #020202;
+	background: rgba(2, 2, 2, 0.5);
+	box-shadow: 0 17px 5px rgba(255, 255, 255, 0.1) inset;
+	-moz-box-shadow: 0 17px 5px rgba(255, 255, 255, 0.1) inset;
+	-webkit-box-shadow: 0 17px 5px rgba(255, 255, 255, 0.1) inset;
+	border-bottom: 1px solid black;
+}
+
+#chat ul {
+	margin: 0px;
+	padding: 0px;
+	color: white;
+	width: 100%;
+	min-height: 50px;
+	max-height: 200px;
+	overflow: auto;
+	list-style: none;
+	border-top: 1px solid #666;
+}
+
+#chat_box {
+	padding: 2px;
+}
+
+input.chat_textbox {
+	font-size: 1.4em;
+	margin: 0px;
+}
+
+#gmcanvas {
+	background: #258e80;
+}
+
+#gmloader {
+	background: url("/resources/loading.gif") center center no-repeat;
+	position: absolute;
+	margin-top: 260px;
+	margin-left: 300px;
+	height: 60px;
+}
+
+#loading_info {
+	position: relative;
+    top: 60px;
+	color: black;
+}
+
+#chat_messages {
+  clear: both;
+  border: 0px;
+  height: 360px;
+  width: 207px;
+  margin: 20px 0px 8px 10px;
+  color: #ffebc7;
+  overflow-y: scroll;
+  text-shadow: black 1px 1px 1px;
+}
+
+#chat_messages li {
+  list-style: none;
+  word-wrap: break-word;
+  text-align: left;
+  margin: 3px 0px;
+  font-size: 13px;
+}
+
+#chat_messages .author {
+	clear: both;
+    float: left;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 5px;
+}
+

@@ -21,11 +21,12 @@ var game;
 ##register preload: opa[list(string)],opa[list(string)],( -> void) -> void
 ##args(imgIdents,audIdents,callback)
 {
-   AUD_CACHE = {};
    var images = list2js(imgIdents);
    var audios = list2js(audIdents);
-   var countLoaded = 0;
-   var countTotal = 0; 
+   var imgLoaded=0,imgError=0,imgTotal=0;
+   var audLoaded=0,audError=0,audTotal=0;
+
+   var progressChanged = +new Date;
 	
    function incrementLoaded() {
       countLoaded++;
@@ -44,24 +45,58 @@ var game;
 
    function imgSuccessHandler() {
 	  IMG_CACHE[this.key] = this;
-      incrementLoaded();
+	  imgLoaded++;
+	  updateProgress();
+	  progressChanged = +new Date;
    }
 	
+   //不知到为什么Firefox会触发两次canplay事件，
+   //如果不做判断，会出现countLoaded大于countTotal的事情。
    function audSuccessHandler() {
-	  //不知到为什么Firefox会触发两次canplay事件，
-	  //如果不做判断，会出现countLoaded大于countTotal的事情。
 	  if(!AUD_CACHE[this.key]){
 		  AUD_CACHE[this.key] = this;
-	  	  incrementLoaded();
+	  	  audLoaded++;
+	  }
+	  progressChanged = +new Date;
+	  updateProgress();
+   }
+
+   function imgErrorHandler() {
+	  imgError++;
+	  progressChanged = +new Date;
+	  updateProgress();
+      throw new Error('Error loading image: ' + this.src);
+   }
+
+   function audErrorHandler() {
+	  audError++;
+	  progressChanged = +new Date;
+	  updateProgress();
+	  throw new Error('Error loading sound: ' + this.src);
+   }
+
+   var updateProgress = function(){
+	  info = document.getElementById("loading_info");
+	  if(!!info){
+	  	info.innerHTML = "loading game resource... [ "+(imgLoaded+audLoaded)+" / "+(imgTotal+audTotal)+" ]"
 	  }
    }
 
-   function errorHandler() {
-	  incrementLoaded();
-      throw new Error('Error loading ' + this.src);
+   var statusCheck = function() {
+	  var finished = ((imgLoaded + imgError >= imgTotal) && (audLoaded + audError >= audTotal));
+	  if(finished){
+		 return callback();
+	  }	  
+
+	  //如果图片加载完成，声音加载超时地话，也开始游戏
+	  var noProgressTime = (+new Date) - progressChanged;
+	  if((imgLoaded + imgError >= imgTotal) && noProgressTime >= 3000){
+		 return callback();
+	  }
+	  setTimeout(statusCheck,1000);
    }
 	
-    for (var i=0;i<images.length;i++) {
+   for (var i=0;i<images.length;i++) {
 	  var key = images[i]
 	  if (key.indexOf('png') == -1 &&
           key.indexOf('jpg') == -1 &&
@@ -70,36 +105,31 @@ var game;
       }
 	 
 	  var img = new Image();
-	  countTotal++;
-      img.addEventListener('load', imgSuccessHandler, true);
-      img.addEventListener('error', errorHandler, true);
+	  imgTotal++;
+	  img.addEventListener('load', imgSuccessHandler, true);
+      img.addEventListener('error',imgErrorHandler, true);
       img.src = key;
       img.key = key;
    }	
-	
+   
    if(window.HTMLAudioElement){
-   		try{
-			var audio = document.createElement("audio");
-			if(audio != null && audio.canPlayType && audio.canPlayType("audio/wav")){
-				for( var i=0;i<audios.length;i++){
-	  				var key = audios[i]
-	  				if(key.indexOf('wav') == -1) continue;
-	  
-					var audio = new Audio();
-	  				audio.addEventListener('canplaythrough', audSuccessHandler, true);
-      				audio.addEventListener('error', errorHandler, true);
-      				audio.src = key;
-      				audio.key = key;
-	  				audio.load();
-					
-					countTotal++;
-   				}
-			}
-   		}catch(e){
-			alert("Error: "+e);
-			window.console.error("Error"+e);
-   		}
+		var audio = document.createElement("audio");
+		if(audio != null && !!audio.canPlayType && !!audio.canPlayType("audio/wav")){
+			for( var i=0;i<audios.length;i++){
+	  			var key = audios[i]
+	  			if(key.indexOf('wav') == -1) continue;
+	  			var audio = new Audio();
+	  			audio.addEventListener('canplaythrough', audSuccessHandler, true);
+      			audio.addEventListener('error', audErrorHandler, true);
+      			audio.src = key;
+      			audio.key = key;
+	  			audio.load();
+				
+				audTotal++;
+   			}
+		}
    }
+   setTimeout(statusCheck,1000);
 }
 
 ##register get: string -> Image.image
@@ -123,16 +153,16 @@ var counter;
 		return function(){
 			if(counter > 0){
 				counter = counter - 1;
-				ctx.clearRect(330+28,237+28,24,24);
+				ctx.clearRect(360+28,237+28,24,24);
 				ctx.restore();
 				ctx.save(ctx);
 				ctx.fillStyle = "#efea3a";
-				ctx.fillRect(330+28,237+28,24,24);
+				ctx.fillRect(360+28,237+28,24,24);
 				ctx.fillStyle = "red";
 				ctx.font = "normal bold 24px serif";
 				ctx.textAlign = "center";
 				ctx.textBaseline = "middle";
-				ctx.fillText(counter,370,277);
+				ctx.fillText(counter,400,277);
 				ctx.restore();
 
 				window.setTimeout(arguments.callee,1000);
@@ -148,8 +178,8 @@ var counter;
 	counter = 0;
 }
 
-##register show_menu: int -> void
-##args(opt_flag)
+##register show_menu: int,bool -> void
+##args(opt_flag,is_zh)
 {
 	var ctx = document.getElementById("gmcanvas").getContext("2d");
 	var arr = [8,4,2,1]
@@ -186,12 +216,12 @@ var counter;
 	}
 	loop.call(this)(); */
 	
-	var img = get_img("menu_bar.png");
-	for(var i=0, x=490; i<arr2.length; i++){
+	var img = (!is_zh)?get_img("en_menu_bar.png"):get_img("cn_menu_bar.png");	
+	for(var i=0, x=550; i<arr2.length; i++){
 		if(arr2[i]){
-			ctx.drawImage(img,60*i,0,60,60,x+60*i,475,60,60);
+			ctx.drawImage(img,60*i,0,60,60,x+60*i,435,60,60);
 		}else{
-			ctx.drawImage(img,60*i,60,60,60,x+60*i,475,60,60);
+			ctx.drawImage(img,60*i,60,60,60,x+60*i,435,60,60);
 		}
 	}
 }
@@ -214,15 +244,14 @@ var get_img = function(key){
 ##register play_sound: string -> void
 ##args(key)
 {
-	var snd = AUD_CACHE[key];
-	if(snd){
+	if(AUD_CACHE[key]){
 		//注：如果不加snd.reload()，chrome好像无法重新播放声音，即只播放一次
 		//之后再不会播放，不知道啥原因，自从升级了chrome(18onlinux,21onwindows)
 		//就有这个问题。但不晓得这样每次播放都reload会不会带来系统负担。
 		//关注此问题！
-		snd.load();
-		snd.play();
-	}	
+		if(window.chrome) AUD_CACHE[key].load();
+		AUD_CACHE[key].play();
+	}
 }
 
 //两个参数，一个是cookie的名子，一个是值
